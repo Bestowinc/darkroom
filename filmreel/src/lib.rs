@@ -1,7 +1,6 @@
 pub mod cut;
 mod error;
 pub mod frame;
-pub mod reel;
 mod utils;
 
 use std::fs;
