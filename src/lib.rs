@@ -53,8 +53,25 @@ impl Opts {
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand)]
 pub enum SubCommand {
+    Version(Version),
     Take(Take),
     Record(Record),
+}
+
+/// argh version workaround
+#[derive(FromArgs, PartialEq, Debug)]
+#[argh(subcommand, name = "version")]
+pub struct Version {
+    /// returns package version
+    #[argh(switch)]
+    version: bool,
+}
+
+/// argh version workaround
+pub fn version() -> String {
+    option_env!("CARGO_PKG_VERSION")
+        .unwrap_or("unknown")
+        .to_string()
 }
 
 /// Takes a single frame, emitting the request then validating the returned response

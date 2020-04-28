@@ -15,6 +15,10 @@ fn main() -> Result<(), BoxError> {
     log::set_boxed_logger(Box::new(Logger)).map(|()| log::set_max_level(log_level))?;
 
     match args.nested {
+        SubCommand::Version(_) => {
+            println!("{}", crate::version());
+            Ok(())
+        }
         SubCommand::Take(cmd) => {
             cmd.validate()?;
             single_take(cmd)?;
