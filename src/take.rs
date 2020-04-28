@@ -120,6 +120,12 @@ pub fn process_response<'a>(
                 actual: &payload_response.to_string_pretty(),
             }
         );
+        error!(
+            "{}{}{}",
+            "= ".red(),
+            "Value Mismatch 🤷‍♀️ ".yellow(),
+            "===".red()
+        );
         return Err("request/response mismatch".into());
     }
 
@@ -188,6 +194,12 @@ fn log_mismatch(frame_str: String, response_str: String) {
         response_str
             .to_colored_json_auto()
             .expect("log_mismatch actual panic")
+    );
+    error!(
+        "{}{}{}",
+        "= ".red(),
+        "Form Mismatch 🤷‍♀️ ".yellow(),
+        "====".red()
     );
 }
 

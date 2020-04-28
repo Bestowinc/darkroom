@@ -58,11 +58,11 @@ pub enum SubCommand {
     Record(Record),
 }
 
-/// argh version workaround
+/// returns CARGO_PKG_VESRION
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand, name = "version")]
 pub struct Version {
-    /// returns package version
+    /// returns cargo package version, this is a temporary argh workaround
     #[argh(switch)]
     version: bool,
 }
