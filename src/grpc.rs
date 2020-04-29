@@ -27,16 +27,33 @@ pub fn grpcurl(prm: Params, req: Request) -> Result<Response, BoxError> {
 
     let mut req_cmd = Command::new("grpcurl");
 
+    dbg!(&prm.address);
+    dbg!(&prm.header);
+    dbg!(&prm.tls);
     let resp_cmd = match prm.header {
-        Some(h) => req_cmd
-            .arg("-H")
-            .arg(h)
-            .arg(tls)
-            .arg("-d")
-            .arg(req.to_payload()?)
-            .arg(prm.address)
-            .arg(req.get_uri())
-            .output()?,
+        Some(h) => {
+            println!(
+                "{:?}",
+                &[
+                    "-H",
+                    &format!("'{}'", &h),
+                    "-d",
+                    &req.to_payload()?,
+                    tls,
+                    &prm.address,
+                    &req.get_uri()
+                ]
+            );
+            req_cmd
+                .arg("-H")
+                .arg(h)
+                .arg("-d")
+                .arg(req.to_payload()?)
+                .arg(tls)
+                .arg(prm.address)
+                .arg(req.get_uri())
+                .output()?
+        }
         None => req_cmd
             .arg(tls)
             .arg("-d")

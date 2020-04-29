@@ -10,6 +10,10 @@ pub mod take;
 
 pub type BoxError = Box<dyn Error>;
 
+pub use filmreel::cut::Register;
+pub use filmreel::frame::*;
+pub use filmreel::reel::{MetaFrame, Reel};
+
 pub struct Logger;
 
 impl log::Log for Logger {

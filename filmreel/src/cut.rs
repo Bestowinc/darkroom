@@ -161,8 +161,15 @@ impl Register {
     }
 
     // ensures string slice past is a singular declaration of a `"${VARIABLE}"`
-    pub fn is_single_variable(var_name: &str, frame_str: &str) -> bool {
-        format!("{}{}{}", "${", var_name, "}") == frame_str.as_ref()
+    pub fn expect_standalone_var(var_name: &str, frame_str: &str) -> Result<(), FrError> {
+        let expected = format!("{}{}{}", "${", var_name, "}");
+        if expected != frame_str.as_ref() {
+            return Err(FrError::FrameParsef(
+                "Singe variable mismatch -",
+                format!("Expected:{}, Got:{}", expected, frame_str),
+            ));
+        }
+        Ok(())
     }
 
     /// Takes a frame string value and compares it against a payload string value

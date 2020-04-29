@@ -307,10 +307,7 @@ impl Response {
                 continue;
             }
             // handle non string payload values returned by the jql query
-            if !Register::is_single_variable(k, &frame_str) {
-                return Err(FrError::FrameParsef(
-                        "frame cut variable matched a non string Value while having a non singular cur variable declaration", frame_str));
-            }
+            Register::expect_standalone_var(k, &frame_str)?;
             write_matches.insert(k, payload_val);
         }
 
