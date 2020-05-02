@@ -62,11 +62,9 @@ pub fn run_request<'a>(
         let _ = stdin.read(&mut [0u8]).expect("read stdin panic");
     } else {
         info!("[{}] frame:", "Hydrated".green());
-        info!("{} {}", "Request URI:".yellow(), frame.get_request_uri()?);
-        info!("\n");
+        info!("{} {}\n", "Request URI:".yellow(), frame.get_request_uri()?);
         info!("{}", frame.to_string_pretty().to_colored_json_auto()?);
-        info!("{}", "=======================".magenta());
-        info!("\n");
+        info!("{}\n", "=======================".magenta());
     }
 
     let params = base_params.init(frame.get_request())?;
@@ -136,9 +134,8 @@ pub fn process_response<'a>(
         "{}{}{}",
         "= ".green(),
         "Match 👍 ".yellow(),
-        "============".green()
+        "============\n".green()
     );
-    info!("\n");
 
     // Error expected actual
     if let Some(cut_out) = cut_out {

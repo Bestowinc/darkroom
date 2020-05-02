@@ -2,7 +2,7 @@
 
 A [filmReel](https://github.com/Bestowinc/filmReel) implementation for Rust.
 
-The `filmreel` crateis a pure Rust implementation of the declarative contract testing spec enjoying the memory safety
+The `filmreel` crate is a pure Rust implementation of the declarative contract testing spec enjoying the memory safety
 property and other benefits from the Rust language.
 
 ## Quick Start

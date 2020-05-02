@@ -31,6 +31,13 @@ impl Reel {
 
         Ok(Self { frames })
     }
+    fn into_success_iter(self) -> Vec<MetaFrame> {
+        self.frames
+            .clone()
+            .into_iter()
+            .filter(|x| x.is_success())
+            .collect()
+    }
 }
 
 impl IntoIterator for Reel {
@@ -57,7 +64,7 @@ impl IntoIterator for Reel {
 ///                     └─ Frame suffix // .fr.json
 /// ```
 ///
-#[derive(PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct MetaFrame {
     pub path: PathBuf,
     pub name: String,
@@ -97,6 +104,12 @@ impl TryFrom<PathBuf> for MetaFrame {
     }
 }
 
+impl MetaFrame {
+    fn is_success(&self) -> bool {
+        self.frame_type == FrameType::Success
+    }
+}
+
 fn parse_sequence(seq: &str) -> Result<(f32, FrameType), BoxError> {
     let mut seq_chars: Vec<char> = Vec::new();
     let mut type_str: String = String::new();
@@ -132,7 +145,7 @@ fn parse_sequence(seq: &str) -> Result<(f32, FrameType), BoxError> {
 }
 
 /// [Frame Types](https://github.com/Bestowinc/filmReel/blob/master/Reel.md#frame-type)
-#[derive(PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum FrameType {
     Error,
     Success,

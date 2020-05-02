@@ -15,7 +15,6 @@ pub fn run_record(cmd: Record) -> Result<(), BoxError> {
     let mut cut_register: Register = Register::new(&cut_str)?;
     // &cut_register.destructive_merge::<Vec<Register>>(
     // Merge any found PathBufs into the cut register destructively
-    dbg!(&cmd.tls);
     let merge_cuts: Result<Vec<Register>, _> = cmd
         .merge_cuts
         .iter()

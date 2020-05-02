@@ -270,7 +270,7 @@ impl Response {
         frame_value["response"] = to_value(self)?;
         Ok(frame_value)
     }
-    ///
+
     /// Pretty json formatting for Response serialization
     pub fn to_string_pretty(&self) -> String {
         serde_json::to_string_pretty(self).expect("serialization error")

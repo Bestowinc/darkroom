@@ -62,7 +62,7 @@ pub enum SubCommand {
     Record(Record),
 }
 
-/// returns CARGO_PKG_VESRION
+/// returns CARGO_PKG_VERSION
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand, name = "version")]
 pub struct Version {
@@ -134,7 +134,11 @@ pub struct Record {
     /// filepath of input cut file
     #[argh(option, short = 'c')]
     cut: Option<PathBuf>,
-    ///
+
+    /// filepath of component cut files
+    #[argh(option, short = 'C')]
+    component_cut: Vec<(String, String)>,
+
     /// filepath of merge cuts
     #[argh(positional)]
     merge_cuts: Vec<PathBuf>,
@@ -165,7 +169,7 @@ impl Record {
             return Err("<path> must be a valid directory");
         }
 
-        // this permits `zsh =(thing)` FIFO syntax
+        // this permits describable zsh `=(thing)` or basic `<(thing)` FIFO syntax
         // https://superuser.com/questions/1059781/what-exactly-is-in-bash-and-in-zsh
         if let Some(cut) = &self.cut {
             if !cut.is_file() {
