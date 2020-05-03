@@ -90,6 +90,10 @@ pub struct Take {
     #[argh(switch)]
     tls: bool,
 
+    /// pass proto files used for payload forming
+    #[argh(option)]
+    proto: Vec<PathBuf>,
+
     /// fallback address passed to the specified protocol
     #[argh(positional, short = 'a')]
     address: Option<String>,
@@ -123,6 +127,10 @@ pub struct Record {
     #[argh(switch)]
     tls: bool,
 
+    /// pass proto files used for payload forming
+    #[argh(option)]
+    proto: Vec<PathBuf>,
+
     /// fallback address passed to the specified protocol if not provided by the frame itself
     #[argh(option, short = 'a')]
     address: Option<String>,
@@ -135,9 +143,9 @@ pub struct Record {
     #[argh(option, short = 'c')]
     cut: Option<PathBuf>,
 
-    /// filepath of component cut files
+    /// filepath of component reel files
     #[argh(option, short = 'C')]
-    component_cut: Vec<(String, String)>,
+    component_reel: Vec<String>,
 
     /// filepath of merge cuts
     #[argh(positional)]
