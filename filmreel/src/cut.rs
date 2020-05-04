@@ -165,7 +165,12 @@ impl Register {
     /// ::Match provided.
     ///
     /// [Read Operation](https://github.com/Bestowinc/filmReel/blob/master/cut.md#read-operation)
-    pub fn read_operation(&self, mat: Match, value: &mut Value) -> Result<(), FrError> {
+    pub fn read_operation(
+        &self,
+        mat: Match,
+        value: &mut Value,
+        hide_vars: bool,
+    ) -> Result<(), FrError> {
         if let Some(name) = mat.name() {
             if self.get_key_value(name).is_none() {
                 return Err(FrError::ReadInstructionf(
@@ -173,7 +178,17 @@ impl Register {
                     name.to_string(),
                 ));
             }
+            if hide_vars && name.starts_with('_') {
+                let expected = format!("{}{}{}", "${", name, "}");
+                if let Value::String(val) = value {
+                    if val.contains(&expected) {
+                        Match::Hide.read_operation(value)?;
+                        return Ok(());
+                    }
+                }
+            }
         }
+
         mat.read_operation(value)?;
         Ok(())
     }
@@ -286,6 +301,7 @@ pub enum Match<'a> {
         value: Value,
         range: Range<usize>,
     },
+    Hide,
 }
 
 impl<'a> Match<'a> {
@@ -295,6 +311,7 @@ impl<'a> Match<'a> {
         match self {
             Match::Escape(range) => range.clone(),
             Match::Variable { range: r, .. } => r.clone(),
+            Match::Hide => panic!("range called on Match::Hide"),
         }
     }
 
@@ -302,6 +319,7 @@ impl<'a> Match<'a> {
     pub fn name(&self) -> Option<&'a str> {
         match self {
             Match::Escape(_) => None,
+            Match::Hide => None,
             Match::Variable { name: n, .. } => Some(*n),
         }
     }
@@ -333,6 +351,15 @@ impl<'a> Match<'a> {
                     *json_value = match_val.clone();
                     Ok(())
                 }
+            },
+            Match::Hide => match json_value {
+                Value::String(json_str) => {
+                    *json_str = "${_HIDDEN}".to_string();
+                    Ok(())
+                }
+                _ => Err(FrError::ReadInstruction(
+                    "Match::Hide.value is a non string Value",
+                )),
             },
         }
     }
@@ -465,7 +492,7 @@ mod tests {
             .read_match(&input.as_str().unwrap())
             .expect("match error");
         for mat in matches.into_iter() {
-            reg.read_operation(mat, &mut input).unwrap();
+            reg.read_operation(mat, &mut input, false).unwrap();
         }
         assert_eq!(expected, input)
     }

@@ -87,6 +87,7 @@ where
 mod tests {
     use super::*;
     use filmreel::frame::{Frame, Request};
+    use std::ffi::OsStr;
     use std::path::PathBuf;
 
     #[test]

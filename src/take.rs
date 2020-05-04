@@ -34,7 +34,7 @@ pub fn run_request<'a>(
         None
     };
 
-    frame.hydrate(&register)?;
+    frame.hydrate(&register, false)?;
 
     if interactive {
         let mut stdin = io::stdin();
@@ -46,6 +46,7 @@ pub fn run_request<'a>(
             format!("[{}] frame", "Hydrated".green()),
         ]);
         let mut hidden_frame = unhydrated_frame.clone().expect("None for hidden frame");
+        hidden_frame.hydrate(&register, true)?;
 
         table.add_row(row![
             unhydrated_frame
@@ -53,7 +54,7 @@ pub fn run_request<'a>(
                 .to_string_pretty()
                 .to_colored_json_auto()?,
             register.to_string_hidden()?.to_colored_json_auto()?,
-            frame.to_string_pretty().to_colored_json_auto()?,
+            hidden_frame.to_string_pretty().to_colored_json_auto()?,
         ]);
         table.printstd();
         write!(
@@ -118,8 +119,8 @@ pub fn process_response<'a>(
         // For now simply run hydrate again to hydrate the newly written cut variables into the
         // Response
         frame.cut.hydrate_writes = true;
-        Frame::hydrate_val(&frame.cut, &mut frame.response.body, &cut_register)?;
-        Frame::hydrate_val(&frame.cut, &mut frame.response.etc, &cut_register)?;
+        Frame::hydrate_val(&frame.cut, &mut frame.response.body, &cut_register, false)?;
+        Frame::hydrate_val(&frame.cut, &mut frame.response.etc, &cut_register, false)?;
     }
 
     if frame.response != payload_response {
