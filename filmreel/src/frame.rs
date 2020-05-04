@@ -136,6 +136,30 @@ impl<'a> Frame<'a> {
             Ok(())
         }
     }
+
+    // Traverses a given serde::Value enum attempting to modify found Strings
+    // for the moment this method also works as a Frame.init() check, emitting FrameParseErrors
+    // pub fn hidden_string(val: &mut Value) -> Result<String, FrError> {
+    //     match val {
+    //         Value::Object(map) => {
+    //             for (_, val) in map.iter_mut() {
+    //                 Self::hydrate_val(set, val, reg)?;
+    //             }
+    //             Ok(())
+    //         }
+    //         Value::Array(vec) => {
+    //             for val in vec.iter_mut() {
+    //                 Self::hydrate_val(set, val, reg)?;
+    //             }
+    //             Ok(())
+    //         }
+    //         Value::String(_) => {
+    //             Self::hydrate_str(set, val, reg)?;
+    //             Ok(())
+    //         }
+    //         _ => Ok(()),
+    //     }
+    // }
 }
 
 /// Represents the protocol used to send the frame payload.

@@ -10,6 +10,7 @@ use filmreel::cut::Register;
 use filmreel::frame::{Frame, Protocol, Response};
 use log::{debug, error, info};
 use prettytable::*;
+use serde_json::Value;
 use std::fs;
 use std::io::{self, prelude::*};
 use std::path::PathBuf;
@@ -22,8 +23,8 @@ pub fn run_request<'a>(
     base_params: &BaseParams,
     interactive: bool,
 ) -> Result<Response, BoxError> {
-    let unhydrated_frame: Option<String> = if interactive {
-        Some(frame.to_string_pretty())
+    let unhydrated_frame: Option<Frame> = if interactive {
+        Some(frame.clone())
     } else {
         info!("[{}] frame:", "Unhydrated".red());
         info!("{}", frame.to_string_pretty().to_colored_json_auto()?);
@@ -44,9 +45,14 @@ pub fn run_request<'a>(
             "Cut Register",
             format!("[{}] frame", "Hydrated".green()),
         ]);
+        let mut hidden_frame = unhydrated_frame.clone().expect("None for hidden frame");
+
         table.add_row(row![
-            unhydrated_frame.unwrap().to_colored_json_auto()?,
-            register.to_string_pretty().to_colored_json_auto()?,
+            unhydrated_frame
+                .expect("None for unhydrated_frame")
+                .to_string_pretty()
+                .to_colored_json_auto()?,
+            register.to_string_hidden()?.to_colored_json_auto()?,
             frame.to_string_pretty().to_colored_json_auto()?,
         ]);
         table.printstd();
@@ -63,7 +69,13 @@ pub fn run_request<'a>(
     } else {
         info!("[{}] frame:", "Hydrated".green());
         info!("{} {}\n", "Request URI:".yellow(), frame.get_request_uri()?);
-        info!("{}", frame.to_string_pretty().to_colored_json_auto()?);
+        info!(
+            "{}",
+            unhydrated_frame
+                .unwrap()
+                .to_string_pretty()
+                .to_colored_json_auto()?
+        );
         info!("{}\n", "=======================".magenta());
     }
 

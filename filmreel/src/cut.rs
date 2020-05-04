@@ -30,9 +30,27 @@ impl Register {
         Ok(reg)
     }
 
-    /// Pretty json formatting for Frame serialization
+    /// Pretty json formatting for Register serialization
     pub fn to_string_pretty(&self) -> String {
         serde_json::to_string_pretty(self).expect("serialization error")
+    }
+
+    /// Pretty formatting for Register serialization, any variables starting with an underscore as
+    /// it's value hidden
+    pub fn to_string_hidden(&self) -> Result<String, FrError> {
+        let val = match serde_json::to_value(self)? {
+            Value::Object(mut map) => {
+                for (k, v) in map.iter_mut() {
+                    if k.starts_with("_") {
+                        *v = Value::String("${_HIDDEN}".to_string());
+                    }
+                }
+                Value::Object(map)
+            }
+            i => i,
+        };
+        let str_val = serde_json::to_string_pretty(&val)?;
+        Ok(str_val)
     }
 
     /// Inserts entry into the Register's Cut Variables
