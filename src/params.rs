@@ -1,6 +1,5 @@
 use crate::{BoxError, Record, Take};
 use filmreel::frame::Request;
-use std::ffi::OsStr;
 use std::path::PathBuf;
 
 /// Parameters needed for a uri method to be sent.
@@ -56,7 +55,7 @@ impl<'a> BaseParams<'a> {
 
         let address = match request.get_entrypoint() {
             Some(i) => i,
-            None => self.address.clone().ok_or("missing address")?,
+            None => self.address.clone().ok_or("Params: missing address")?,
         };
 
         let proto = match self.proto.len() {

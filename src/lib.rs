@@ -143,9 +143,9 @@ pub struct Record {
     #[argh(option, short = 'c')]
     cut: Option<PathBuf>,
 
-    /// filepath of component reel files
+    /// filepath of component reel files with every reel indicated by the the pipe separated "<reel_filepath>|<reel_name>" string
     #[argh(option, short = 'C')]
-    component_reel: Vec<String>,
+    merge_reels: Vec<String>,
 
     /// filepath of merge cuts
     #[argh(positional)]

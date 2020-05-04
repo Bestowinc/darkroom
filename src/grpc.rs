@@ -25,28 +25,41 @@ pub fn validate_grpcurl() -> Result<(), &'static str> {
 pub fn grpcurl(prm: Params, req: Request) -> Result<Response, BoxError> {
     validate_grpcurl()?;
 
-    let tls = if prm.tls { "" } else { "-plaintext" };
+    let mut flags: Vec<&OsStr> = vec![];
 
+    if !prm.tls {
+        flags.push(OsStr::new("-plaintext"));
+    }
     // prepend "-proto" to every protos PathBuf provided
-    let proto_args: Vec<&OsStr> = match prm.proto {
+    let mut proto_args: Vec<&OsStr> = match prm.proto {
         Some(protos) => {
             iter_path_args(OsStr::new("-proto"), protos.iter().map(|x| x.as_ref())).collect()
         }
         None => vec![],
     };
-    let headers: Vec<String> = match prm.header {
-        Some(h) => vec!["-H".to_string(), h],
-        None => vec![],
+    flags.append(&mut proto_args);
+
+    let headers = match prm.header {
+        Some(h) => Some(h.replace("\"", "")),
+        None => None,
     };
 
-    let req_cmd = Command::new("grpcurl")
-        .args(headers)
-        .args(proto_args)
-        .arg(tls)
+    if let Some(h) = headers.as_ref() {
+        flags.push(OsStr::new("-H"));
+        flags.push(h.as_ref());
+    }
+
+    let req_cmd = match Command::new("grpcurl")
+        .args(flags)
+        .arg("-d")
         .arg(req.to_payload()?)
         .arg(prm.address)
         .arg(req.get_uri())
-        .output()?;
+        .output()
+    {
+        Ok(v) => v,
+        Err(e) => return Err(format!("grpcurl error: {}", e).into()),
+    };
 
     let response: Response = match req_cmd.status.code() {
         Some(0) => Response {
