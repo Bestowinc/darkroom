@@ -169,14 +169,13 @@ pub fn process_response<'a>(
 }
 
 /// Run single take using the darkroom::Take struct
-pub fn single_take(cmd: Take) -> Result<(), BoxError> {
+pub fn single_take(cmd: Take, base_params: BaseParams) -> Result<(), BoxError> {
     let frame_str = fr::file_to_string(&cmd.frame)?;
     let cut_str = fr::file_to_string(&cmd.cut)?;
 
     // Frame to be mutably borrowed
     let frame = Frame::new(&frame_str)?;
     let mut payload_frame = frame.clone();
-    let base_params = BaseParams::from(&cmd);
     let mut cut_register = Register::new(&cut_str)?;
     let response = run_request(&mut payload_frame, &cut_register, &base_params, false)?;
 

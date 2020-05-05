@@ -54,12 +54,12 @@ impl IntoIterator for Reel {
 /// Frame filename anatomy:
 ///
 /// ```text
-/// ┌─────────── Sequence number        // 01
-/// │ ┌───────── Frame type             // se
-/// │ │  ┌────── Reel name              // usr
-/// │ │  │   ┌─  Method name            // createuser
-/// ▼ ▼  ▼   ▼
-/// 01se.usr.createuser.fr.json
+/// ┌─────────── Reel name              // usr
+/// │   ┌─────── Sequence number        // 01
+/// │   │ ┌───── Return type            // se
+/// │   │ │  ┌── Command name           // createuser
+/// ▼   ▼ ▼  ▼
+/// usr.01se.createuser.fr.json
 ///                     ▲
 ///                     └─ Frame suffix // .fr.json
 /// ```

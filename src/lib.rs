@@ -1,3 +1,4 @@
+use crate::params::BaseParams;
 use argh::FromArgs;
 use std::error::Error;
 use std::path::PathBuf;
@@ -37,8 +38,39 @@ pub struct Command {
     #[argh(switch, short = 'v')]
     verbose: bool,
 
+    /// enable TLS (not needed for HTTP/S)
+    #[argh(switch)]
+    tls: bool,
+
+    /// pass proto files used for payload forming
+    #[argh(option)]
+    proto: Vec<PathBuf>,
+
+    /// fallback address passed to the specified protocol
+    #[argh(positional, short = 'a')]
+    address: Option<String>,
+
+    /// fallback header passed to the specified protocol
+    #[argh(option, short = 'H')]
+    header: Option<String>,
+
     #[argh(subcommand)]
     pub nested: SubCommand,
+}
+
+impl Command {
+    pub fn base_params(&self) -> BaseParams {
+        BaseParams {
+            tls: self.tls,
+            header: self.header.clone(),
+            address: self.address.clone(),
+            proto: self.proto.clone(),
+        }
+    }
+
+    pub fn get_nested(self) -> SubCommand {
+        self.nested
+    }
 }
 
 /// Additional options such as verbosity
@@ -86,22 +118,6 @@ pub struct Take {
     #[argh(positional)]
     frame: PathBuf,
 
-    /// enable TLS (not needed for HTTP/S)
-    #[argh(switch)]
-    tls: bool,
-
-    /// pass proto files used for payload forming
-    #[argh(option)]
-    proto: Vec<PathBuf>,
-
-    /// fallback address passed to the specified protocol
-    #[argh(positional, short = 'a')]
-    address: Option<String>,
-
-    /// fallback header passed to the specified protocol
-    #[argh(option, short = 'H')]
-    header: Option<String>,
-
     /// filepath of input cut file
     #[argh(option, short = 'c')]
     cut: PathBuf,
@@ -123,30 +139,13 @@ pub struct Record {
     #[argh(positional)]
     reel_name: String,
 
-    /// enable TLS (not needed for HTTP/S)
-    #[argh(switch)]
-    tls: bool,
-
-    /// pass proto files used for payload forming
-    #[argh(option)]
-    proto: Vec<PathBuf>,
-
-    /// fallback address passed to the specified protocol if not provided by the frame itself
-    #[argh(option, short = 'a')]
-    address: Option<String>,
-
-    /// fallback header passed to the specified protocol if not provided by the frame itself
-    #[argh(option, short = 'H')]
-    header: Option<String>,
-
     /// filepath of input cut file
     #[argh(option, short = 'c')]
     cut: Option<PathBuf>,
 
-    /// filepath of component reel files with every reel indicated by the the pipe separated "<reel_filepath>|<reel_name>" string
-    #[argh(option, short = 'C')]
-    merge_reels: Vec<String>,
-
+    // filepath of component reel files with every reel indicated by the the pipe separated "<reel_filepath>|<reel_name>" string
+    // #[argh(option, short = 'C')]
+    // merge_reels: Vec<String>,
     /// filepath of merge cuts
     #[argh(positional)]
     merge_cuts: Vec<PathBuf>,
@@ -161,6 +160,7 @@ pub struct Record {
 }
 
 impl Take {
+    /// validate ensures the frame and cut filepaths provided point to valid files
     pub fn validate(&self) -> Result<(), &str> {
         if !self.frame.is_file() {
             return Err("<frame> must be a valid file");
@@ -172,6 +172,8 @@ impl Take {
     }
 }
 impl Record {
+    /// validate ensures the reels is a valid directory and ensures that the corresponding cut file
+    /// exists
     pub fn validate(&self) -> Result<(), &str> {
         if !self.reel_path.is_dir() {
             return Err("<path> must be a valid directory");
