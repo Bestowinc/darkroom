@@ -5,6 +5,9 @@
 A contract testing tool built in Rust using the [filmReel format](https://github.com/Bestowinc/filmReel).
 
 
+`dark`:
+
+<!-- dark start -->
 ```
 Usage: dark [-v] <command> [<args>]
 
@@ -21,9 +24,12 @@ Commands:
                     take for every frame in the sequence
 
 ```
+<!-- dark stop -->
 
 
 `dark take`:
+
+<!-- dark take start -->
 
 ```
 Usage: dark take <frame> [<address>] [--tls] [-H <header>] -c <cut> [-o <output>]
@@ -38,9 +44,11 @@ Options:
   --help            display usage information
 
 ```
+<!-- dark take stop -->
 
 `dark record`:
 
+<!-- dark record start -->
 ```
 Usage: dark record <reel_path> <reel_name> [<merge_cuts...>] [--tls] [-a <address>] [-H <header>] [-c <cut>] [-o <output>] [-i]
 
@@ -58,6 +66,7 @@ Options:
   --help            display usage information
 
 ```
+<!-- dark record stop -->
 
 ### New in `0.2`:
 
