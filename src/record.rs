@@ -24,7 +24,6 @@ pub fn run_record(cmd: Record, base_params: BaseParams) -> Result<(), BoxError> 
     &cut_register.destructive_merge(merge_cuts?);
     let reel = Reel::new(&cmd.reel_path, &cmd.reel_name)?;
 
-    dbg!(&reel);
     for meta_frame in reel {
         // if cmd.output is Some, provide a take PathBuf
         let output = cmd
@@ -61,9 +60,15 @@ pub fn run_record(cmd: Record, base_params: BaseParams) -> Result<(), BoxError> 
         )?;
     }
 
-    if let Some(_) = cmd.output {
+    if let Some(path) = base_params.cut_out {
+        debug!("writing cut output to PathBuf...");
+        fs::write(path, &cut_register.to_string_hidden()?)
+            .expect("unable to write to cmd.get_cut_copy()");
+    }
+    // if take output was specified write to default cut copy path
+    else if cmd.output.is_some() {
         debug!("writing to cut file...");
-        fs::write(cmd.get_cut_copy(), &cut_register.to_string_pretty())
+        fs::write(cmd.get_cut_copy(), &cut_register.to_string_hidden()?)
             .expect("unable to write to cmd.get_cut_copy()");
     }
 

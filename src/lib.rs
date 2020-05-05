@@ -54,6 +54,10 @@ pub struct Command {
     #[argh(option, short = 'H')]
     header: Option<String>,
 
+    /// output of final cut file
+    #[argh(option, short = 'C')]
+    cut_out: Option<PathBuf>,
+
     #[argh(subcommand)]
     pub nested: SubCommand,
 }
@@ -65,6 +69,7 @@ impl Command {
             header: self.header.clone(),
             address: self.address.clone(),
             proto: self.proto.clone(),
+            cut_out: self.cut_out.clone(),
         }
     }
 
@@ -165,9 +170,14 @@ impl Take {
         if !self.frame.is_file() {
             return Err("<frame> must be a valid file");
         }
-        if !self.cut.is_file() {
-            return Err("<cut> must be a valid file");
-        }
+
+        // TODO for now remove file requirement
+        //
+        // this permits describable zsh `=(thing)` or basic `<(thing)` FIFO syntax
+        // https://superuser.com/questions/1059781/what-exactly-is-in-bash-and-in-zsh
+        // if !self.cut.is_file() {
+        //     return Err("<cut> must be a valid file");
+        // }
         Ok(())
     }
 }
@@ -179,8 +189,6 @@ impl Record {
             return Err("<path> must be a valid directory");
         }
 
-        // this permits describable zsh `=(thing)` or basic `<(thing)` FIFO syntax
-        // https://superuser.com/questions/1059781/what-exactly-is-in-bash-and-in-zsh
         if let Some(cut) = &self.cut {
             if !cut.is_file() {
                 return Err("<cut> must be a valid file");

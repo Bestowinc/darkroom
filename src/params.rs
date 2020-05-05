@@ -19,6 +19,7 @@ pub struct BaseParams {
     pub header: Option<String>,
     pub address: Option<String>,
     pub proto: Vec<PathBuf>,
+    pub cut_out: Option<PathBuf>,
 }
 
 impl From<&Command> for BaseParams {
@@ -28,6 +29,7 @@ impl From<&Command> for BaseParams {
             header: cmd.header.clone(),
             address: cmd.address.clone(),
             proto: cmd.proto.clone(),
+            cut_out: cmd.cut_out.clone(),
         }
     }
 }
@@ -89,6 +91,7 @@ mod tests {
             header: Some("initial_header".to_string()),
             proto: vec![],
             verbose: false,
+            cut_out: None,
             nested: SubCommand::Version(Version { version: true }),
         };
         let request: Request = serde_json::from_str::<Frame>(

@@ -186,6 +186,12 @@ pub fn single_take(cmd: Take, base_params: BaseParams) -> Result<(), BoxError> {
         Some(&cmd.cut),
         cmd.output.clone(),
     )?;
+
+    if let Some(path) = base_params.cut_out {
+        debug!("writing cut output to PathBuf...");
+        fs::write(path, &cut_register.to_string_hidden()?)
+            .expect("unable to write to cmd.get_cut_copy()");
+    }
     Ok(())
 }
 
