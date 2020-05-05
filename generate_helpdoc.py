@@ -7,7 +7,6 @@ will run <arg> --help for every argument present in the main function
 and replace the present set of arguments
 """
 import os
-import subprocess
 import argparse
 
 
@@ -27,21 +26,25 @@ def replace_index(filename, doc_arg, doc_str):
             for line in md_in:
                 if f"<!-- {doc_arg} start" in line:
                     pre = False
+                    pre_doc.append(line)
+                    pre_doc.append("```\n")
+                    continue
                 if f"<!-- {doc_arg} stop" in line:
                     post = True
+                    post_doc.append("```\n")
+                    post_doc.append(line)
+                    continue
                 if pre:
                     pre_doc.append(line)
-                    pre_doc.append("```")
                 if post:
                     post_doc.append(line)
-                    post_doc.append("```")
     except FileNotFoundError:
         pass
 
     with open(filename, "w") as md_out:
         md_out.writelines(pre_doc)
         md_out.writelines(doc_str)
-        md_out.writelines(post_doc[1:])
+        md_out.writelines(post_doc)
 
 
 def main():
@@ -58,11 +61,11 @@ def main():
     args = parser.parse_args()
 
     cwd = os.getcwd()
-    md_out_fn = os.path.join(cwd, args.filename)
+    filename = os.path.join(cwd, args.filename)
     for doc_arg in current_slugs:
-        doc_str = subprocess.run(doc_arg.split(" ") + ["--help"]).stdout()
+        doc_str = os.popen(f"{doc_arg} --help").read()
         # do a naive pass for now
-        replace_index(md_out_fn, doc_arg, doc_str)
+        replace_index(filename, doc_arg, doc_str)
 
 
 if __name__ == "__main__":
