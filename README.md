@@ -9,12 +9,15 @@ A contract testing tool built in Rust using the [filmReel format](https://github
 
 <!-- dark start -->
 ```
-Usage: dark [-v] <command> [<args>]
+Usage: dark [<address>] [-v] [--tls] [--proto <proto>] [-H <header>] <command> [<args>]
 
 Top-level command.
 
 Options:
   -v, --verbose     enable verbose output
+  --tls             enable TLS (not needed for HTTP/S)
+  --proto           pass proto files used for payload forming
+  -H, --header      fallback header passed to the specified protocol
   --help            display usage information
 
 Commands:
@@ -32,14 +35,11 @@ Commands:
 
 <!-- dark take start -->
 ```
-Usage: dark take <frame> [<address>] [--tls] [--proto <proto>] [-H <header>] -c <cut> [-o <output>]
+Usage: dark take <frame> -c <cut> [-o <output>]
 
 Takes a single frame, emitting the request then validating the returned response
 
 Options:
-  --tls             enable TLS (not needed for HTTP/S)
-  --proto           pass proto files used for payload forming
-  -H, --header      fallback header passed to the specified protocol
   -c, --cut         filepath of input cut file
   -o, --output      output of take file
   --help            display usage information
@@ -51,21 +51,12 @@ Options:
 
 <!-- dark record start -->
 ```
-Usage: dark record <reel_path> <reel_name> [<merge_cuts...>] [--tls] [--proto <proto>] [-a <address>] [-H <header>] [-c <cut>] [-C <merge-reels>] [-o <output>] [-i]
+Usage: dark record <reel_path> <reel_name> [<merge_cuts...>] [-c <cut>] [-o <output>] [-i]
 
 Attempts to play through an entire Reel sequence running a take for every frame in the sequence
 
 Options:
-  --tls             enable TLS (not needed for HTTP/S)
-  --proto           pass proto files used for payload forming
-  -a, --address     fallback address passed to the specified protocol if not
-                    provided by the frame itself
-  -H, --header      fallback header passed to the specified protocol if not
-                    provided by the frame itself
   -c, --cut         filepath of input cut file
-  -C, --merge-reels filepath of component reel files with every reel indicated
-                    by the the pipe separated "<reel_filepath>|<reel_name>"
-                    string
   -o, --output      output directory for successful takes
   -i, --interactive interactive frame sequence transitions
   --help            display usage information
