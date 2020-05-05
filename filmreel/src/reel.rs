@@ -8,6 +8,7 @@ use std::result::Result;
 /// Represents the sequence of Frames to execute.
 ///
 /// [Reel spec](https://github.com/Bestowinc/filmReel/blob/master/Reel.md#reel)
+#[derive(Debug)]
 pub struct Reel {
     frames: Vec<MetaFrame>,
 }
@@ -16,7 +17,7 @@ impl Reel {
     /// A new reel is created from a provided Path or PathBuf
     pub fn new<P: AsRef<Path>>(dir: P, reel_name: &str) -> Result<Self, BoxError> {
         let mut frames = Vec::new();
-        let dir_glob = dir.as_ref().join(format!("*.{}.*.fr.json", reel_name));
+        let dir_glob = dir.as_ref().join(format!("{}.*.*.fr.json", reel_name));
 
         for entry in glob(&dir_glob.to_str().unwrap())
             .expect("Failed to read glob pattern")
@@ -87,12 +88,15 @@ impl TryFrom<PathBuf> for MetaFrame {
             None => return Err(FrError::ReelParse("failed parsing PathBuf").into()),
         };
 
-        let (seq, fr_type) = parse_sequence(reel_parts.remove(0))?;
         let reel_name = String::from(reel_parts.remove(0));
+        let (seq, fr_type) = parse_sequence(reel_parts.remove(0))?;
         let name = reel_parts.remove(0);
 
         // only three indices should be present when split on '.'
-        assert!(reel_parts.is_empty());
+        assert!(
+            reel_parts.is_empty(),
+            "frame name should only have 3 period delimited sections ending with '.fr.json'"
+        );
 
         Ok(Self {
             path: p.clone(),
@@ -179,5 +183,21 @@ mod tests {
             Ok(mat) => assert_eq!(expected, mat),
             Err(err) => assert_eq!("some_err", err.to_string()),
         }
+    }
+
+    #[test]
+    fn test_metaframe_try_from() {
+        let try_path = MetaFrame::try_from(PathBuf::from("./reel_name.01s.frame_name.fr.json"))
+            .expect("test_metaframe_try_from failed try_from");
+        assert_eq!(
+            MetaFrame {
+                frame_type: FrameType::Success,
+                name: "frame_name".to_string(),
+                path: PathBuf::from("./reel_name.01s.frame_name.fr.json"),
+                reel_name: "reel_name".to_string(),
+                step: 1.0,
+            },
+            try_path
+        );
     }
 }
