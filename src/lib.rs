@@ -115,7 +115,7 @@ pub fn version() -> String {
         .to_string()
 }
 
-/// Takes a single frame, emitting the request then validating the returned response
+/// takes a single frame, emitting the request then validating the returned response
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand, name = "take")]
 pub struct Take {
