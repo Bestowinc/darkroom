@@ -2,7 +2,7 @@ use darkroom::record::run_record;
 use darkroom::take::single_take;
 use darkroom::*;
 
-fn main() -> Result<(), BoxError> {
+fn try_main() -> Result<(), BoxError> {
     let args: Command = argh::from_env();
     let opts: Opts = Opts::new(&args);
     let base_params = args.base_params();
@@ -31,5 +31,12 @@ fn main() -> Result<(), BoxError> {
             run_record(cmd, base_params)?;
             Ok(())
         }
+    }
+}
+
+fn main() {
+    if let Err(err) = try_main() {
+        eprintln!("{}", err);
+        std::process::exit(2);
     }
 }
