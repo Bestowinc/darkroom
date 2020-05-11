@@ -72,20 +72,7 @@ Options:
 ```
 <!-- dark record stop -->
 
-### New in `0.2`:
-
-* HTTP support
-* Full json object storage and retrieval, the cut register is no longer a flat associative array, strings are still used to map to JSON objects for templating
-* Variable discarding: `${lowercase}` variables will only be kept around for the duration of the frame
-* Headers and entrypoints can be stored and read on a per JSON frame basis
-* SOPS/json secrets support
-
-### New in `0.2.1`:
-
-* Added hidden variable support, hidden variables are defined with a leading underscore: `${_HIDDEN}`
-* Added `dark version` command
-* moved common parameters into the main `dark` command to be shared across subcommands
-
+## Examples:
 
 #### SOPS example:
 
@@ -104,6 +91,24 @@ dark -v record -i ./test_data post -c ./test_data/post.cut.json \
 # echo the origin "${IP}" that gets written to the cut register from the httpbin.org POST request
 dark -C >(jq .IP) take ./test_data/post.01s.body.fr.json --cut ./test_data/post.cut.json
 ```
+
+
+## Changes:
+
+#### `0.2`:
+
+* HTTP support
+* Full json object storage and retrieval, the cut register is no longer a flat associative array, strings are still used to map to JSON objects for templating
+* Variable discarding: `${lowercase}` variables will only be kept around for the duration of the frame
+* Headers and entrypoints can be stored and read on a per JSON frame basis
+* SOPS/json secrets support
+
+#### `0.2.1`:
+
+* Added hidden variable support, hidden variables are defined with a leading underscore: `${_HIDDEN}`
+* Added `dark version` command
+* moved common parameters into the main `dark` command to be shared across subcommands
+
 
 <!--
 cargo build --release
