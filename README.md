@@ -1,4 +1,6 @@
-# Darkroom [![Crates.io](https://img.shields.io/crates/v/darkroom.svg)](https://crates.io/crates/darkroom) [![Docs.rs](https://docs.rs/darkroom/badge.svg)](https://docs.rs/darkroom/) <img src="darkroomlogo_mini.svg?sanitize=true" width="150" align="right"/>
+# Darkroom  <img src="darkroomlogo_mini.svg?sanitize=true" width="150" align="right"/>
+
+[![Crates.io](https://img.shields.io/crates/v/darkroom.svg)](https://crates.io/crates/darkroom) [![Docs.rs](https://docs.rs/darkroom/badge.svg)](https://docs.rs/darkroom/)
 
 
 
