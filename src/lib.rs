@@ -36,12 +36,12 @@ pub struct Command {
     #[argh(switch, short = 'v')]
     verbose: bool,
 
-    /// enable TLS (automatically inferred HTTP/S)
+    /// enable TLS (automatically inferred for HTTP/S)
     #[argh(switch)]
     tls: bool,
 
     /// pass proto files used for payload forming
-    #[argh(option)]
+    #[argh(option, short = 'p')]
     proto: Vec<PathBuf>,
 
     /// fallback address passed to the specified protocol
@@ -102,7 +102,7 @@ pub enum SubCommand {
     Record(Record),
 }
 
-/// returns CARGO_PKG_VERSION
+/// Returns CARGO_PKG_VERSION
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand, name = "version")]
 pub struct Version {
@@ -118,7 +118,7 @@ pub fn version() -> String {
         .to_string()
 }
 
-/// takes a single frame, emitting the request then validating the returned response
+/// Takes a single frame, emitting the request then validating the returned response
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand, name = "take")]
 pub struct Take {

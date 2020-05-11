@@ -98,10 +98,10 @@ dark --cut-out >(jq .IP) take ./test_data/post.01s.body.fr.json --cut ./test_dat
 #### `0.2`:
 
 * HTTP support
-* Full json object storage and retrieval, the cut register is no longer a flat associative array, strings are still used to map to JSON objects for templating
+* Full JSON object storage and retrieval, the cut register is no longer a flat associative array, strings are still used to map to JSON objects for templating
 * Variable discarding: `${lowercase}` variables will only be kept around for the duration of the frame
 * Headers and entrypoints can be stored and read on a per JSON frame basis
-* SOPS/json secrets support
+* SOPS/JSON secrets support
 
 #### `0.2.1`:
 

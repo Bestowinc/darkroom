@@ -1,6 +1,7 @@
 use crate::grpc::grpcurl;
 use crate::http::http_request;
 use crate::params::BaseParams;
+use crate::record::write_cut;
 use crate::Take;
 use anyhow::{anyhow, Error};
 use colored::*;
@@ -9,8 +10,10 @@ use colored_json::prelude::*;
 use filmreel as fr;
 use fr::cut::Register;
 use fr::frame::{Frame, Protocol, Response};
+use fr::reel::MetaFrame;
 use log::{debug, error, info};
 use prettytable::*;
+use std::convert::TryFrom;
 use std::fs;
 use std::io::{self, prelude::*};
 use std::path::PathBuf;
@@ -164,20 +167,32 @@ pub fn single_take(cmd: Take, base_params: BaseParams) -> Result<(), Error> {
     let frame = Frame::new(&frame_str)?;
     let mut payload_frame = frame.clone();
     let mut cut_register = Register::new(&cut_str)?;
-    let response = run_request(&mut payload_frame, &cut_register, &base_params)?;
+    let payload_response = run_request(&mut payload_frame, &cut_register, &base_params)?;
 
-    process_response(
+    let get_metaframe = || MetaFrame::try_from(cmd.frame.clone());
+
+    if let Err(e) = process_response(
         &mut payload_frame,
         &mut cut_register,
-        response,
+        payload_response,
         cmd.take_out.clone(),
+    ) {
+        write_cut(
+            &base_params.cut_out,
+            &cut_register,
+            get_metaframe()?.reel_name,
+            true,
+        )?;
+        return Err(e);
+    }
+
+    write_cut(
+        &base_params.cut_out,
+        &cut_register,
+        get_metaframe()?.reel_name,
+        false,
     )?;
 
-    if let Some(path) = base_params.cut_out {
-        debug!("writing cut output to PathBuf...");
-        fs::write(path, &cut_register.to_string_hidden()?)
-            .expect("unable to write to cmd.get_cut_copy()");
-    }
     Ok(())
 }
 

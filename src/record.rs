@@ -1,13 +1,13 @@
 use crate::params::BaseParams;
 use crate::take::*;
 use crate::Record;
-use anyhow::Error;
+use anyhow::{Context, Error};
 use colored::*;
 use filmreel as fr;
 use filmreel::cut::Register;
 use filmreel::frame::Frame;
 use filmreel::reel::*;
-use log::{debug, warn};
+use log::{debug, error, warn};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -37,7 +37,7 @@ pub fn run_record(cmd: Record, base_params: BaseParams) -> Result<(), Error> {
             meta_frame
                 .path
                 .file_stem()
-                .expect("unable to unwrap MetaFrame.path")
+                .context("unable to unwrap MetaFrame.path")?
         );
         warn!("{}", "=======================".green());
 
@@ -47,26 +47,48 @@ pub fn run_record(cmd: Record, base_params: BaseParams) -> Result<(), Error> {
         let mut payload_frame = frame.clone();
 
         let payload_response = run_request(&mut payload_frame, &cut_register, &base_params)?;
-        process_response(
+        if let Err(e) = process_response(
             &mut payload_frame,
             &mut cut_register,
             payload_response,
             output,
-        )?;
+        ) {
+            write_cut(&base_params.cut_out, &cut_register, &cmd.reel_name, true)?;
+            return Err(e);
+        }
     }
 
-    if let Some(path) = base_params.cut_out {
-        debug!("writing cut output to PathBuf...");
-        fs::write(path, &cut_register.to_string_hidden()?)
-            .expect("unable to write to cmd.get_cut_copy()");
-    }
-    // if take output was specified write to default cut copy path
-    else if cmd.take_out.is_some() {
-        debug!("writing to cut file...");
-        fs::write(cmd.get_cut_copy(), &cut_register.to_string_hidden()?)
-            .expect("unable to write to cmd.get_cut_copy()");
-    }
+    write_cut(&base_params.cut_out, &cut_register, &cmd.reel_name, false)?;
 
+    Ok(())
+}
+
+/// write_cut dumps the in memory Cut Regiser to the PathBuf provided.
+pub fn write_cut<T>(
+    cut_out: &Option<PathBuf>,
+    cut_register: &Register,
+    reel_name: T,
+    failed_response: bool,
+) -> Result<(), Error>
+where
+    T: AsRef<str> + std::fmt::Display,
+{
+    if let Some(path) = cut_out {
+        // announce that write_cut is dumping a failed record register
+        if failed_response {
+            error!("{}", "take aborted! writing to --cut_out provided...".red());
+        }
+        // write with a hidden cut if directory was provided
+        if path.is_dir() {
+            let dir_cut = &path.join(format!(".{}.cut.json", reel_name));
+            fs::write(dir_cut, &cut_register.to_string_hidden()?)
+                .context("unable to write to --cut_out directory")?;
+        } else {
+            debug!("writing cut output to PathBuf...");
+            fs::write(path, &cut_register.to_string_hidden()?)
+                .context("unable to write to cmd.get_cut_copy()")?;
+        }
+    }
     Ok(())
 }
 
