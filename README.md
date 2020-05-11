@@ -16,7 +16,7 @@ A contract testing tool built in Rust using the [filmReel format](https://github
 
 <!-- dark start -->
 ```
-Usage: dark [<address>] [-v] [--tls] [--proto <proto>] [-H <header>] [-C <cut-out>] <command> [<args>]
+Usage: dark [<address>] [-v] [--tls] [--proto <proto>] [-H <header>] [-C <cut-out>] [-i] <command> [<args>]
 
 Top-level command.
 
@@ -26,11 +26,12 @@ Options:
   --proto           pass proto files used for payload forming
   -H, --header      fallback header passed to the specified protocol
   -C, --cut-out     output of final cut file
+  -i, --interactive interactive frame sequence transitions
   --help            display usage information
 
 Commands:
   version           returns CARGO_PKG_VERSION
-  take              Takes a single frame, emitting the request then validating
+  take              takes a single frame, emitting the request then validating
                     the returned response
   record            Attempts to play through an entire Reel sequence running a
                     take for every frame in the sequence
@@ -43,13 +44,13 @@ Commands:
 
 <!-- dark take start -->
 ```
-Usage: dark take <frame> -c <cut> [-o <output>]
+Usage: dark take <frame> -c <cut> [-o <take-out>]
 
-Takes a single frame, emitting the request then validating the returned response
+takes a single frame, emitting the request then validating the returned response
 
 Options:
   -c, --cut         filepath of input cut file
-  -o, --output      output of take file
+  -o, --take-out    output of take file
   --help            display usage information
 
 ```
@@ -59,14 +60,13 @@ Options:
 
 <!-- dark record start -->
 ```
-Usage: dark record <reel_path> <reel_name> [<merge_cuts...>] [-c <cut>] [-o <output>] [-i]
+Usage: dark record <reel_path> <reel_name> [<merge_cuts...>] [-c <cut>] [-o <take-out>]
 
 Attempts to play through an entire Reel sequence running a take for every frame in the sequence
 
 Options:
   -c, --cut         filepath of input cut file
-  -o, --output      output directory for successful takes
-  -i, --interactive interactive frame sequence transitions
+  -o, --take-out    output directory for successful takes
   --help            display usage information
 
 ```
