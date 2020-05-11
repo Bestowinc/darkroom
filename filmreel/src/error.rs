@@ -25,10 +25,10 @@ impl Error for FrError {
 
 macro_rules! errorf {
     ($fmt: expr, $err_name:expr, $err_msg:expr, $item: expr) => {
-        writeln!($fmt, "=======================")?;
-        writeln!($fmt, "{}: {}", $err_name, $err_msg)?;
-        writeln!($fmt, "{} {}", "-->".red(), $item)?;
-        writeln!($fmt, "=======================")?;
+        writeln!($fmt, "\n{}", "=======================".red())?;
+        writeln!($fmt, "{}: {}", $err_name.yellow(), $err_msg)?;
+        writeln!($fmt, "{} {}", "-->".bright_black(), $item)?;
+        writeln!($fmt, "{}", "=======================".red())?;
     };
 }
 

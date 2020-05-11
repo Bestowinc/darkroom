@@ -118,7 +118,7 @@ impl<'a> Frame<'a> {
                 if let Some(n) = mat.name() {
                     if !set.contains(n) {
                         return Err(FrError::FrameParsef(
-                            "Variable is not present in Frame InstructionSet",
+                            "Variable is not present in InstructionSet",
                             n.to_string(),
                         ));
                     }

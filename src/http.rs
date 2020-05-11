@@ -78,7 +78,7 @@ pub fn http_request(prm: Params, req: Request) -> Result<Response, Error> {
     Ok(Response {
         body: response
             .json()
-            .context("reqwest::Response.json() decoding")?,
+            .context("reqwest::Response.json() decode failure")?,
         // TODO add response headers
         etc: json!({}),
         status,
