@@ -1,4 +1,5 @@
-use crate::{BoxError, Command};
+use crate::Command;
+use anyhow::{anyhow, Error};
 use filmreel::frame::Request;
 use std::path::PathBuf;
 
@@ -37,7 +38,7 @@ impl From<&Command> for BaseParams {
 impl BaseParams {
     /// init provides a frame's request properties to override or populated
     /// parameter fields desired by a specific Frame
-    pub fn init(&self, request: Request) -> Result<Params, BoxError> {
+    pub fn init(&self, request: Request) -> Result<Params, Error> {
         // let request = frame.get_request();
 
         let header: Option<String> = match request.get_header() {
@@ -47,7 +48,10 @@ impl BaseParams {
 
         let address = match request.get_entrypoint() {
             Some(i) => i,
-            None => self.address.clone().ok_or("Params: missing address")?,
+            None => self
+                .address
+                .clone()
+                .ok_or(anyhow!("Params: missing address"))?,
         };
 
         let proto = match self.proto.len() {

@@ -1,6 +1,7 @@
 use crate::params::BaseParams;
 use crate::take::*;
-use crate::{BoxError, Record};
+use crate::Record;
+use anyhow::Error;
 use colored::*;
 use filmreel as fr;
 use filmreel::cut::Register;
@@ -10,7 +11,7 @@ use log::{debug, warn};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-pub fn run_record(cmd: Record, base_params: BaseParams) -> Result<(), BoxError> {
+pub fn run_record(cmd: Record, base_params: BaseParams) -> Result<(), Error> {
     let cut_str = fr::file_to_string(cmd.get_cut_file())?;
     let mut cut_register: Register = Register::new(&cut_str)?;
     // &cut_register.destructive_merge::<Vec<Register>>(
@@ -55,7 +56,6 @@ pub fn run_record(cmd: Record, base_params: BaseParams) -> Result<(), BoxError> 
             &mut payload_frame,
             &mut cut_register,
             payload_response,
-            None,
             output,
         )?;
     }

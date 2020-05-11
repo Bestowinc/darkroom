@@ -1,6 +1,6 @@
 use crate::params::BaseParams;
+use anyhow::{anyhow, Error};
 use argh::FromArgs;
-use std::error::Error;
 use std::path::PathBuf;
 
 pub mod grpc;
@@ -8,8 +8,6 @@ pub mod http;
 pub mod params;
 pub mod record;
 pub mod take;
-
-pub type BoxError = Box<dyn Error>;
 
 pub use filmreel::cut::Register;
 pub use filmreel::frame::*;
@@ -166,9 +164,9 @@ pub struct Record {
 
 impl Take {
     /// validate ensures the frame and cut filepaths provided point to valid files
-    pub fn validate(&self) -> Result<(), &str> {
+    pub fn validate(&self) -> Result<(), Error> {
         if !self.frame.is_file() {
-            return Err("<frame> must be a valid file");
+            return Err(anyhow!("<frame> must be a valid file"));
         }
 
         // TODO for now remove file requirement
@@ -184,25 +182,27 @@ impl Take {
 impl Record {
     /// validate ensures the reels is a valid directory and ensures that the corresponding cut file
     /// exists
-    pub fn validate(&self) -> Result<(), &str> {
+    pub fn validate(&self) -> Result<(), Error> {
         if !self.reel_path.is_dir() {
-            return Err("<path> must be a valid directory");
+            return Err(anyhow!("<path> must be a valid directory"));
         }
 
         if let Some(cut) = &self.cut {
             if !cut.is_file() {
-                return Err("<cut> must be a valid file");
+                return Err(anyhow!("<cut> must be a valid file"));
             }
         } else {
             // check existence of implicit cut file in the same directory
             if !self.get_cut_file().is_file() {
-                return Err("unable to find a matching cut file in the given directory");
+                return Err(anyhow!(
+                    "unable to find a matching cut file in the given directory"
+                ));
             }
         }
 
         if let Some(output) = &self.output {
             if !output.is_dir() {
-                return Err("<output> must be a valid directory");
+                return Err(anyhow!("<output> must be a valid directory"));
             }
         }
         Ok(())

@@ -1,16 +1,16 @@
 use crate::grpc::grpcurl;
 use crate::http::http_request;
 use crate::params::BaseParams;
-use crate::{BoxError, Take};
+use crate::Take;
+use anyhow::{anyhow, Error};
 use colored::*;
 use colored_diff::PrettyDifference;
 use colored_json::prelude::*;
 use filmreel as fr;
-use filmreel::cut::Register;
-use filmreel::frame::{Frame, Protocol, Response};
+use fr::cut::Register;
+use fr::frame::{Frame, Protocol, Response};
 use log::{debug, error, info};
 use prettytable::*;
-use serde_json::Value;
 use std::fs;
 use std::io::{self, prelude::*};
 use std::path::PathBuf;
@@ -22,7 +22,7 @@ pub fn run_request<'a>(
     register: &'a Register,
     base_params: &BaseParams,
     interactive: bool,
-) -> Result<Response, BoxError> {
+) -> Result<Response, Error> {
     let unhydrated_frame: Option<Frame> = if interactive {
         Some(frame.clone())
     } else {
@@ -86,9 +86,8 @@ pub fn process_response<'a>(
     frame: &'a mut Frame,
     cut_register: &'a mut Register,
     payload_response: Response,
-    cut_out: Option<&PathBuf>,
     output: Option<PathBuf>,
-) -> Result<&'a Register, BoxError> {
+) -> Result<&'a Register, Error> {
     let payload_matches = match frame
         .response
         .match_payload_response(&frame.cut, &payload_response)
@@ -98,7 +97,7 @@ pub fn process_response<'a>(
                 frame.response.to_string_pretty(),
                 payload_response.to_string_pretty(),
             );
-            return Err(e.into());
+            return Err(Error::from(e));
         }
         Ok(r) => r,
     };
@@ -131,7 +130,7 @@ pub fn process_response<'a>(
             "Value Mismatch 🤷‍♀️ ".yellow(),
             "===".red()
         );
-        return Err("request/response mismatch".into());
+        return Err(anyhow!("request/response mismatch"));
     }
 
     // remove lowercase values
@@ -157,7 +156,7 @@ pub fn process_response<'a>(
 }
 
 /// Run single take using the darkroom::Take struct
-pub fn single_take(cmd: Take, base_params: BaseParams) -> Result<(), BoxError> {
+pub fn single_take(cmd: Take, base_params: BaseParams) -> Result<(), Error> {
     let frame_str = fr::file_to_string(&cmd.frame)?;
     let cut_str = fr::file_to_string(&cmd.cut)?;
 
@@ -171,7 +170,6 @@ pub fn single_take(cmd: Take, base_params: BaseParams) -> Result<(), BoxError> {
         &mut payload_frame,
         &mut cut_register,
         response,
-        Some(&cmd.cut),
         cmd.output.clone(),
     )?;
 
@@ -244,7 +242,7 @@ mod tests {
         };
         let mut register = Register::default();
         let processed_register =
-            process_response(&mut frame, &mut register, payload_response, None, None).unwrap();
+            process_response(&mut frame, &mut register, payload_response, None).unwrap();
         assert_eq!(*processed_register, register!({"USER_ID"=>"BIG_BEN"}));
     }
 }
