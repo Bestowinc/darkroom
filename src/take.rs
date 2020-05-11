@@ -21,8 +21,8 @@ pub fn run_request<'a>(
     frame: &'a mut Frame,
     register: &'a Register,
     base_params: &BaseParams,
-    interactive: bool,
 ) -> Result<Response, Error> {
+    let interactive = base_params.interactive;
     let unhydrated_frame: Option<Frame> = if interactive {
         Some(frame.clone())
     } else {
@@ -164,13 +164,13 @@ pub fn single_take(cmd: Take, base_params: BaseParams) -> Result<(), Error> {
     let frame = Frame::new(&frame_str)?;
     let mut payload_frame = frame.clone();
     let mut cut_register = Register::new(&cut_str)?;
-    let response = run_request(&mut payload_frame, &cut_register, &base_params, false)?;
+    let response = run_request(&mut payload_frame, &cut_register, &base_params)?;
 
     process_response(
         &mut payload_frame,
         &mut cut_register,
         response,
-        cmd.output.clone(),
+        cmd.take_out.clone(),
     )?;
 
     if let Some(path) = base_params.cut_out {

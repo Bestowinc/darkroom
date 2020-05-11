@@ -78,18 +78,18 @@ Options:
 
 ```sh
 # destructively merge FIFO sops "KEY_NAME" value into the in-memory cut register
-dark record ./reel_path reel_name -c ./reel_name.cut.json \
+dark record ./reel_path reel_name --cut ./reel_name.cut.json \
     <(sops -d --extract '["KEY_NAME"]' path/to/myfile.enc.json)
 
 # multiple merge cuts can be used, with values being overridden left to right (right will have newer values)
-dark -v record -i ./test_data post -c ./test_data/post.cut.json \
+dark -v --interactive record ./test_data post --cut ./test_data/post.cut.json \
     <(echo '{"new":"value"}') <(echo '{"newer": "value", "new":"overridden"}')
 ```
 #### Cut output example:
 
 ```sh
 # echo the origin "${IP}" that gets written to the cut register from the httpbin.org POST request
-dark -C >(jq .IP) take ./test_data/post.01s.body.fr.json --cut ./test_data/post.cut.json
+dark --cut-out >(jq .IP) take ./test_data/post.01s.body.fr.json --cut ./test_data/post.cut.json
 ```
 
 

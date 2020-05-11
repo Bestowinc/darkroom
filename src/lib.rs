@@ -56,6 +56,10 @@ pub struct Command {
     #[argh(option, short = 'C')]
     cut_out: Option<PathBuf>,
 
+    /// interactive frame sequence transitions
+    #[argh(switch, short = 'i')]
+    interactive: bool,
+
     #[argh(subcommand)]
     pub nested: SubCommand,
 }
@@ -68,6 +72,7 @@ impl Command {
             address: self.address.clone(),
             proto: self.proto.clone(),
             cut_out: self.cut_out.clone(),
+            interactive: self.interactive,
         }
     }
 
@@ -127,7 +132,7 @@ pub struct Take {
 
     /// output of take file
     #[argh(option, short = 'o')]
-    output: Option<PathBuf>,
+    take_out: Option<PathBuf>,
 }
 
 /// Attempts to play through an entire Reel sequence running a take for every frame in the sequence
@@ -155,11 +160,7 @@ pub struct Record {
 
     /// output directory for successful takes
     #[argh(option, short = 'o')]
-    output: Option<PathBuf>,
-
-    /// interactive frame sequence transitions
-    #[argh(switch, short = 'i')]
-    interactive: bool,
+    take_out: Option<PathBuf>,
 }
 
 impl Take {
@@ -200,7 +201,7 @@ impl Record {
             }
         }
 
-        if let Some(output) = &self.output {
+        if let Some(output) = &self.take_out {
             if !output.is_dir() {
                 return Err(anyhow!("<output> must be a valid directory"));
             }

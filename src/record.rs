@@ -28,7 +28,7 @@ pub fn run_record(cmd: Record, base_params: BaseParams) -> Result<(), Error> {
     for meta_frame in reel {
         // if cmd.output is Some, provide a take PathBuf
         let output = cmd
-            .output
+            .take_out
             .as_ref()
             .map(|dir| take_output(&dir, &&meta_frame.path));
         warn!(
@@ -46,12 +46,7 @@ pub fn run_record(cmd: Record, base_params: BaseParams) -> Result<(), Error> {
         // Frame to be mutably borrowed
         let mut payload_frame = frame.clone();
 
-        let payload_response = run_request(
-            &mut payload_frame,
-            &cut_register,
-            &base_params,
-            cmd.interactive,
-        )?;
+        let payload_response = run_request(&mut payload_frame, &cut_register, &base_params)?;
         process_response(
             &mut payload_frame,
             &mut cut_register,
@@ -66,7 +61,7 @@ pub fn run_record(cmd: Record, base_params: BaseParams) -> Result<(), Error> {
             .expect("unable to write to cmd.get_cut_copy()");
     }
     // if take output was specified write to default cut copy path
-    else if cmd.output.is_some() {
+    else if cmd.take_out.is_some() {
         debug!("writing to cut file...");
         fs::write(cmd.get_cut_copy(), &cut_register.to_string_hidden()?)
             .expect("unable to write to cmd.get_cut_copy()");

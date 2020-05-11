@@ -21,6 +21,7 @@ pub struct BaseParams {
     pub address: Option<String>,
     pub proto: Vec<PathBuf>,
     pub cut_out: Option<PathBuf>,
+    pub interactive: bool,
 }
 
 impl From<&Command> for BaseParams {
@@ -31,6 +32,7 @@ impl From<&Command> for BaseParams {
             address: cmd.address.clone(),
             proto: cmd.proto.clone(),
             cut_out: cmd.cut_out.clone(),
+            interactive: cmd.interactive,
         }
     }
 }
@@ -96,6 +98,7 @@ mod tests {
             proto: vec![],
             verbose: false,
             cut_out: None,
+            interactive: false,
             nested: SubCommand::Version(Version { version: true }),
         };
         let request: Request = serde_json::from_str::<Frame>(
