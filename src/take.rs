@@ -26,16 +26,20 @@ pub fn run_request<'a>(
     base_params: &BaseParams,
 ) -> Result<Response, Error> {
     let interactive = base_params.interactive;
-    let unhydrated_frame: Option<Frame> = if interactive {
-        Some(frame.clone())
-    } else {
-        info!("[{}] frame:", "Unhydrated".red());
-        info!("{}", frame.to_string_pretty().to_colored_json_auto()?);
-        info!("{}", "=======================".magenta());
-        info!("HYDRATING...");
-        info!("{}", "=======================".magenta());
-        None
-    };
+
+    let mut unhydrated_frame: Option<Frame> = None;
+    let mut hidden_frame: Option<Frame> = None;
+    if interactive || base_params.verbose {
+        unhydrated_frame = Some(frame.clone());
+        let mut hydrated = frame.clone();
+        hydrated.hydrate(&register, true)?;
+        hidden_frame = Some(hydrated);
+    }
+    info!("[{}] frame:", "Unhydrated".red());
+    info!("{}", frame.to_string_pretty().to_colored_json_auto()?);
+    info!("{}", "=======================".magenta());
+    info!("HYDRATING...");
+    info!("{}", "=======================".magenta());
 
     frame.hydrate(&register, false)?;
 
@@ -48,16 +52,18 @@ pub fn run_request<'a>(
             "Cut Register",
             format!("[{}] frame", "Hydrated".green()),
         ]);
-        let mut hidden_frame = unhydrated_frame.clone().expect("None for hidden frame");
-        hidden_frame.hydrate(&register, true)?;
 
+        let hidden = match hidden_frame {
+            Some(f) => f,
+            None => return Err(anyhow!("None for hidden_frame")),
+        };
         table.add_row(row![
             unhydrated_frame
                 .expect("None for unhydrated_frame")
                 .to_string_pretty()
                 .to_colored_json_auto()?,
             register.to_string_hidden()?.to_colored_json_auto()?,
-            hidden_frame.to_string_pretty().to_colored_json_auto()?,
+            hidden.to_string_pretty().to_colored_json_auto()?,
         ]);
         table.printstd();
         write!(
@@ -71,9 +77,13 @@ pub fn run_request<'a>(
         // Read a single byte and discard
         let _ = stdin.read(&mut [0u8]).expect("read stdin panic");
     } else {
-        info!("[{}] frame:", "Hydrated".green());
+        let hidden = match hidden_frame {
+            Some(f) => f,
+            None => return Err(anyhow!("None for hidden_frame")),
+        };
         info!("{} {}\n", "Request URI:".yellow(), frame.get_request_uri()?);
-        info!("{}", frame.to_string_pretty().to_colored_json_auto()?);
+        info!("[{}] frame:", "Hydrated".green());
+        info!("{}", hidden.to_string_pretty().to_colored_json_auto()?);
         info!("{}\n", "=======================".magenta());
     }
 
@@ -166,7 +176,7 @@ pub fn single_take(cmd: Take, base_params: BaseParams) -> Result<(), Error> {
     // Frame to be mutably borrowed
     let frame = Frame::new(&frame_str)?;
     let mut payload_frame = frame.clone();
-    let mut cut_register = Register::new(&cut_str)?;
+    let mut cut_register = Register::from(&cut_str)?;
     let payload_response = run_request(&mut payload_frame, &cut_register, &base_params)?;
 
     let get_metaframe = || MetaFrame::try_from(cmd.frame.clone());

@@ -138,6 +138,24 @@ impl<'a> Frame<'a> {
             Ok(())
         }
     }
+
+    /// Pretty formatting for Frame serialization,
+    /// any variables starting with an underscore as it's value hidden
+    pub fn to_string_hidden(&self) -> Result<String, FrError> {
+        let val = match serde_json::to_value(self)? {
+            Value::Object(mut map) => {
+                for (k, v) in map.iter_mut() {
+                    if k.starts_with("_") {
+                        *v = Value::String("${_HIDDEN}".to_string());
+                    }
+                }
+                Value::Object(map)
+            }
+            i => i,
+        };
+        let str_val = serde_json::to_string_pretty(&val)?;
+        Ok(str_val)
+    }
 }
 
 /// Represents the protocol used to send the frame payload.

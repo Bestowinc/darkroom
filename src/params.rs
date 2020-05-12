@@ -22,6 +22,7 @@ pub struct BaseParams {
     pub proto: Vec<PathBuf>,
     pub cut_out: Option<PathBuf>,
     pub interactive: bool,
+    pub verbose: bool,
 }
 
 impl From<&Command> for BaseParams {
@@ -33,6 +34,7 @@ impl From<&Command> for BaseParams {
             proto: cmd.proto.clone(),
             cut_out: cmd.cut_out.clone(),
             interactive: cmd.interactive,
+            verbose: cmd.verbose,
         }
     }
 }

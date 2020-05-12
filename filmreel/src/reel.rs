@@ -10,6 +10,7 @@ use std::result::Result;
 /// [Reel spec](https://github.com/Bestowinc/filmReel/blob/master/Reel.md#reel)
 #[derive(Debug)]
 pub struct Reel {
+    dir: PathBuf,
     frames: Vec<MetaFrame>,
 }
 
@@ -30,14 +31,29 @@ impl Reel {
         // sort by string value since sorting by f32 is not idiomatic
         frames.sort_by(|a, b| a.path.cmp(&b.path));
 
-        Ok(Self { frames })
+        Ok(Self {
+            dir: PathBuf::from(dir.as_ref().to_str().expect("None Reel dir")),
+            frames,
+        })
     }
-    fn into_success_iter(self) -> Vec<MetaFrame> {
-        self.frames
-            .clone()
-            .into_iter()
-            .filter(|x| x.is_success())
-            .collect()
+
+    /// convenience function to get default associated cut file
+    pub fn get_default_cut_path(&self) -> PathBuf {
+        let reel_name = self.frames[0].reel_name.clone();
+        self.dir.join(format!("{}.cut.json", reel_name))
+    }
+
+    /// Return only successful frames
+    pub fn success_only(self) -> Self {
+        Self {
+            dir: self.dir,
+            frames: self
+                .frames
+                .clone()
+                .into_iter()
+                .filter(|x| x.is_success())
+                .collect(),
+        }
     }
 }
 

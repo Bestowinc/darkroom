@@ -73,6 +73,7 @@ impl Command {
             proto: self.proto.clone(),
             cut_out: self.cut_out.clone(),
             interactive: self.interactive,
+            verbose: self.verbose,
         }
     }
 
@@ -151,9 +152,10 @@ pub struct Record {
     #[argh(option, short = 'c')]
     cut: Option<PathBuf>,
 
-    // filepath of component reel files with every reel indicated by the the pipe separated "<reel_filepath>|<reel_name>" string
-    // #[argh(option, short = 'C')]
-    // merge_reels: Vec<String>,
+    /// repeatable component reel pattern using an  ampersand separator: "<dir>&<reel_name>"
+    #[argh(option, short = 'b')]
+    component: Vec<String>,
+
     /// filepath of merge cuts
     #[argh(positional)]
     merge_cuts: Vec<PathBuf>,
