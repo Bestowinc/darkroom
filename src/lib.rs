@@ -152,7 +152,7 @@ pub struct Record {
     #[argh(option, short = 'c')]
     cut: Option<PathBuf>,
 
-    /// repeatable component reel pattern using an  ampersand separator: "<dir>&<reel_name>"
+    /// repeatable component reel pattern using an ampersand separator: `--component "<dir>&<reel_name>"`
     #[argh(option, short = 'b')]
     component: Vec<String>,
 

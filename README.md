@@ -16,22 +16,22 @@ A contract testing tool built in Rust using the [filmReel format](https://github
 
 <!-- dark start -->
 ```
-Usage: dark [<address>] [-v] [--tls] [--proto <proto>] [-H <header>] [-C <cut-out>] [-i] <command> [<args>]
+Usage: dark [<address>] [-v] [--tls] [-p <proto>] [-H <header>] [-C <cut-out>] [-i] <command> [<args>]
 
 Top-level command.
 
 Options:
   -v, --verbose     enable verbose output
-  --tls             enable TLS (automatically inferred HTTP/S)
-  --proto           pass proto files used for payload forming
+  --tls             enable TLS (automatically inferred for HTTP/S)
+  -p, --proto       pass proto files used for payload forming
   -H, --header      fallback header passed to the specified protocol
   -C, --cut-out     output of final cut file
   -i, --interactive interactive frame sequence transitions
   --help            display usage information
 
 Commands:
-  version           returns CARGO_PKG_VERSION
-  take              takes a single frame, emitting the request then validating
+  version           Returns CARGO_PKG_VERSION
+  take              Takes a single frame, emitting the request then validating
                     the returned response
   record            Attempts to play through an entire Reel sequence running a
                     take for every frame in the sequence
@@ -46,7 +46,7 @@ Commands:
 ```
 Usage: dark take <frame> -c <cut> [-o <take-out>]
 
-takes a single frame, emitting the request then validating the returned response
+Takes a single frame, emitting the request then validating the returned response
 
 Options:
   -c, --cut         filepath of input cut file
@@ -60,12 +60,14 @@ Options:
 
 <!-- dark record start -->
 ```
-Usage: dark record <reel_path> <reel_name> [<merge_cuts...>] [-c <cut>] [-o <take-out>]
+Usage: dark record <reel_path> <reel_name> [<merge_cuts...>] [-c <cut>] [-b <component>] [-o <take-out>]
 
 Attempts to play through an entire Reel sequence running a take for every frame in the sequence
 
 Options:
   -c, --cut         filepath of input cut file
+  -b, --component   repeatable component reel pattern using an ampersand
+                    separator: `--component "<dir>&<reel_name>"`
   -o, --take-out    output directory for successful takes
   --help            display usage information
 
