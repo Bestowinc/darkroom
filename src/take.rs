@@ -34,31 +34,31 @@ fn get_styler() -> Styler {
     }
 }
 
-trait ToTakeColoredJson {
-    fn to_colored_tk_json(&self) -> Result<String, FrError>;
+trait ToTakeColouredJson {
+    fn to_coloured_tk_json(&self) -> Result<String, FrError>;
 }
 
-impl<T> ToTakeColoredJson for T
+impl<T> ToTakeColouredJson for T
 where
     T: ToStringPretty,
 {
-    fn to_colored_tk_json(&self) -> Result<String, FrError> {
+    fn to_coloured_tk_json(&self) -> Result<String, FrError> {
         Ok(self
             .to_string_pretty()?
             .to_colored_json_with_styler(ColorMode::default().eval(), get_styler())?)
     }
 }
 
-trait ToTakeHiddenColoredJson: ToTakeColoredJson {
+trait ToTakeHiddenColouredJson: ToTakeColouredJson {
     // fn to_colored_json(&self) -> Result<String, FrError>;
-    fn to_hidden_colored_json(&self) -> Result<String, FrError>;
+    fn to_hidden_tk_json(&self) -> Result<String, FrError>;
 }
 
-impl<T> ToTakeHiddenColoredJson for T
+impl<T> ToTakeHiddenColouredJson for T
 where
     T: ToStringHidden + Serialize,
 {
-    fn to_hidden_colored_json(&self) -> Result<String, FrError> {
+    fn to_hidden_tk_json(&self) -> Result<String, FrError> {
         Ok(self
             .to_string_hidden()?
             .to_colored_json_with_styler(ColorMode::default().eval(), get_styler())?)
@@ -85,7 +85,7 @@ pub fn run_request<'a>(
         None
     };
     info!("[{}] frame:", "Unhydrated".red());
-    info!("{}", frame.to_colored_tk_json()?);
+    info!("{}", frame.to_coloured_tk_json()?);
     info!("{}", "=======================".magenta());
     info!("HYDRATING...");
     info!("{}", "=======================".magenta());
@@ -109,9 +109,9 @@ pub fn run_request<'a>(
         table.add_row(row![
             unhydrated_frame
                 .expect("None for unhydrated_frame")
-                .to_colored_tk_json()?,
-            register.to_hidden_colored_json()?,
-            hidden.to_colored_tk_json()?,
+                .to_coloured_tk_json()?,
+            register.to_hidden_tk_json()?,
+            hidden.to_coloured_tk_json()?,
         ]);
         table.printstd();
         write!(
@@ -131,7 +131,7 @@ pub fn run_request<'a>(
         };
         info!("{} {}", "Request URI:".yellow(), frame.get_request_uri()?);
         info!("[{}] frame:", "Hydrated".green());
-        info!("{}", hidden.to_colored_tk_json()?);
+        info!("{}", hidden.to_coloured_tk_json()?);
     }
 
     let params = base_params.init(frame.get_request())?;
@@ -261,14 +261,14 @@ fn log_mismatch(frame_str: String, response_str: String) -> Result<(), Error> {
         "{}\n",
         frame_str
             .to_colored_json_with_styler(ColorMode::default().eval(), get_styler())
-            .context("log_mismatch \"Expected:\" panic")?
+            .context("log_mismatch \"Expected:\" serialization")?
     );
     error!("{}\n", "Actual:".magenta());
     error!(
         "{}\n",
         response_str
             .to_colored_json_with_styler(ColorMode::default().eval(), get_styler())
-            .context("log_mismatch \"Actual:\"  panic")?
+            .context("log_mismatch \"Actual:\"  serialization")?
     );
     error!(
         "{}{}{}",

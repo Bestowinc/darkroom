@@ -36,7 +36,6 @@ pub fn grpcurl(prm: Params, req: Request) -> Result<Response, Error> {
             protos.iter().map(|x| x.as_ref()),
         ));
     }
-    // flags.append(&mut proto_args);
 
     let headers = match prm.header {
         Some(h) => Some(h.replace("\"", "")),
