@@ -128,6 +128,13 @@ impl MetaFrame {
     fn is_success(&self) -> bool {
         self.frame_type == FrameType::Success
     }
+
+    // get_filename returns the str representation of the MetaFrame.path file stem
+    pub fn get_filename(&self) -> Option<String> {
+        self.path
+            .file_stem()
+            .map(|x| String::from(x.to_string_lossy()))
+    }
 }
 
 fn parse_sequence(seq: &str) -> Result<(f32, FrameType), FrError> {

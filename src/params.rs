@@ -55,7 +55,7 @@ impl BaseParams {
             None => self
                 .address
                 .clone()
-                .ok_or(anyhow!("Params: missing address"))?,
+                .ok_or_else(|| anyhow!("Params: missing address"))?,
         };
 
         let proto = match self.proto.len() {

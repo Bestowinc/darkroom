@@ -3,17 +3,21 @@ use crate::http::http_request;
 use crate::params::BaseParams;
 use crate::record::write_cut;
 use crate::Take;
-use anyhow::{anyhow, Error};
+use anyhow::{anyhow, Context, Error};
 use colored::*;
 use colored_diff::PrettyDifference;
 use colored_json::prelude::*;
 use colored_json::{Colour, Styler};
 use filmreel as fr;
-use fr::cut::Register;
-use fr::frame::{Frame, Protocol, Response};
-use fr::reel::MetaFrame;
+use filmreel::{
+    cut::Register,
+    frame::{Frame, Protocol, Response},
+    reel::MetaFrame,
+    FrError, ToStringHidden, ToStringPretty,
+};
 use log::{debug, error, info};
 use prettytable::*;
+use serde::Serialize;
 use std::convert::TryFrom;
 use std::fs;
 use std::io::{self, prelude::*};
@@ -30,16 +34,34 @@ fn get_styler() -> Styler {
     }
 }
 
-trait ToTakeColoredJson: ToColoredJson {
-    fn to_take_colored_json(&self) -> serde_json::Result<String>;
+trait ToTakeColoredJson {
+    fn to_colored_tk_json(&self) -> Result<String, FrError>;
 }
 
-impl<S> ToTakeColoredJson for S
+impl<T> ToTakeColoredJson for T
 where
-    S: ?Sized + AsRef<str>,
+    T: ToStringPretty,
 {
-    fn to_take_colored_json(&self) -> serde_json::Result<String> {
-        self.to_colored_json_with_styler(ColorMode::default().eval(), get_styler())
+    fn to_colored_tk_json(&self) -> Result<String, FrError> {
+        Ok(self
+            .to_string_pretty()?
+            .to_colored_json_with_styler(ColorMode::default().eval(), get_styler())?)
+    }
+}
+
+trait ToTakeHiddenColoredJson: ToTakeColoredJson {
+    // fn to_colored_json(&self) -> Result<String, FrError>;
+    fn to_hidden_colored_json(&self) -> Result<String, FrError>;
+}
+
+impl<T> ToTakeHiddenColoredJson for T
+where
+    T: ToStringHidden + Serialize,
+{
+    fn to_hidden_colored_json(&self) -> Result<String, FrError> {
+        Ok(self
+            .to_string_hidden()?
+            .to_colored_json_with_styler(ColorMode::default().eval(), get_styler())?)
     }
 }
 
@@ -54,15 +76,16 @@ pub fn run_request<'a>(
     let verbose = base_params.verbose;
 
     let mut unhydrated_frame: Option<Frame> = None;
-    let mut hidden_frame: Option<Frame> = None;
-    if interactive || verbose {
+    let hidden_frame: Option<Frame> = if interactive || verbose {
         unhydrated_frame = Some(frame.clone());
         let mut hydrated = frame.clone();
         hydrated.hydrate(&register, true)?;
-        hidden_frame = Some(hydrated);
-    }
+        Some(hydrated)
+    } else {
+        None
+    };
     info!("[{}] frame:", "Unhydrated".red());
-    info!("{}", frame.to_string_pretty().to_take_colored_json()?,);
+    info!("{}", frame.to_colored_tk_json()?);
     info!("{}", "=======================".magenta());
     info!("HYDRATING...");
     info!("{}", "=======================".magenta());
@@ -86,10 +109,9 @@ pub fn run_request<'a>(
         table.add_row(row![
             unhydrated_frame
                 .expect("None for unhydrated_frame")
-                .to_string_pretty()
-                .to_take_colored_json()?,
-            register.to_string_hidden()?.to_take_colored_json()?,
-            hidden.to_string_pretty().to_take_colored_json()?,
+                .to_colored_tk_json()?,
+            register.to_hidden_colored_json()?,
+            hidden.to_colored_tk_json()?,
         ]);
         table.printstd();
         write!(
@@ -109,12 +131,7 @@ pub fn run_request<'a>(
         };
         info!("{} {}", "Request URI:".yellow(), frame.get_request_uri()?);
         info!("[{}] frame:", "Hydrated".green());
-        info!(
-            "{}",
-            hidden
-                .to_string_pretty()
-                .to_colored_json_with_styler(ColorMode::default().eval(), get_styler())?
-        );
+        info!("{}", hidden.to_colored_tk_json()?);
     }
 
     let params = base_params.init(frame.get_request())?;
@@ -137,8 +154,8 @@ pub fn process_response<'a>(
     {
         Err(e) => {
             log_mismatch(
-                frame.response.to_string_pretty(),
-                payload_response.to_string_pretty(),
+                frame.response.to_colored_tk_json()?,
+                payload_response.to_colored_tk_json()?,
             );
             return Err(Error::from(e));
         }
@@ -163,8 +180,8 @@ pub fn process_response<'a>(
         error!(
             "{}",
             PrettyDifference {
-                expected: &frame.response.to_string_pretty(),
-                actual: &payload_response.to_string_pretty(),
+                expected: &frame.response.to_string_pretty()?,
+                actual: &payload_response.to_string_pretty()?,
             }
         );
         error!(
@@ -189,7 +206,7 @@ pub fn process_response<'a>(
     // If an output was specified create a take file
     if let Some(frame_out) = output {
         debug!("creating take receipt...");
-        fs::write(frame_out, frame.to_string_pretty())?;
+        fs::write(frame_out, frame.to_string_pretty()?)?;
     }
     if payload_response != frame.response {
         error!("OK");
@@ -202,14 +219,17 @@ pub fn process_response<'a>(
 pub fn single_take(cmd: Take, base_params: BaseParams) -> Result<(), Error> {
     let frame_str = fr::file_to_string(&cmd.frame)?;
     let cut_str = fr::file_to_string(&cmd.cut)?;
+    let get_metaframe = || MetaFrame::try_from(cmd.frame.clone());
 
     // Frame to be mutably borrowed
-    let frame = Frame::new(&frame_str)?;
+    let frame = Frame::new(&frame_str).context(
+        get_metaframe()?
+            .get_filename()
+            .expect("MetaFrame.get_filename() panic"),
+    )?;
     let mut payload_frame = frame.clone();
     let mut cut_register = Register::from(&cut_str)?;
     let payload_response = run_request(&mut payload_frame, &cut_register, &base_params)?;
-
-    let get_metaframe = || MetaFrame::try_from(cmd.frame.clone());
 
     if let Err(e) = process_response(
         &mut payload_frame,

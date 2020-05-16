@@ -27,11 +27,6 @@ impl<'a> Frame<'a> {
         Ok(frame)
     }
 
-    /// Pretty json formatting for Frame serialization
-    pub fn to_string_pretty(&self) -> String {
-        serde_json::to_string_pretty(self).expect("serialization error")
-    }
-
     /// Serializes the Frame struct to a serde_json::Value
     pub fn to_value(&self) -> Value {
         to_value(self).expect("serialization error")
@@ -137,24 +132,6 @@ impl<'a> Frame<'a> {
             }
             Ok(())
         }
-    }
-
-    /// Pretty formatting for Frame serialization,
-    /// any variables starting with an underscore as it's value hidden
-    pub fn to_string_hidden(&self) -> Result<String, FrError> {
-        let val = match serde_json::to_value(self)? {
-            Value::Object(mut map) => {
-                for (k, v) in map.iter_mut() {
-                    if k.starts_with("_") {
-                        *v = Value::String("${_HIDDEN}".to_string());
-                    }
-                }
-                Value::Object(map)
-            }
-            i => i,
-        };
-        let str_val = serde_json::to_string_pretty(&val)?;
-        Ok(str_val)
     }
 }
 
@@ -289,11 +266,6 @@ impl Response {
         let mut frame_value = json!({"response":{}});
         frame_value["response"] = to_value(self)?;
         Ok(frame_value)
-    }
-
-    /// Pretty json formatting for Response serialization
-    pub fn to_string_pretty(&self) -> String {
-        serde_json::to_string_pretty(self).expect("serialization error")
     }
 
     /// Using the write instructions found in the frame InstructionSet, look for matches to be

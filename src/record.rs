@@ -4,9 +4,7 @@ use crate::Record;
 use anyhow::{anyhow, Context, Error};
 use colored::*;
 use filmreel as fr;
-use filmreel::cut::Register;
-use filmreel::frame::Frame;
-use filmreel::reel::*;
+use fr::{cut::Register, frame::Frame, reel::*, ToStringHidden};
 use log::{debug, error, warn};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -44,8 +42,7 @@ pub fn run_record(cmd: Record, base_params: BaseParams) -> Result<(), Error> {
             "{} {:?}",
             "File:".yellow(),
             meta_frame
-                .path
-                .file_stem()
+                .get_filename()
                 .context("unable to unwrap MetaFrame.path")?
         );
         warn!("{}", "=======================".green());
@@ -130,7 +127,7 @@ pub fn init_components(components: Vec<String>) -> Result<(Vec<Reel>, Register),
 fn parse_component(component: String) -> Result<(Reel, Register), Error> {
     let reel_path: PathBuf;
     let reel_name: &str;
-    match component.splitn(2, "&").collect::<Vec<&str>>().as_slice() {
+    match component.splitn(2, '&').collect::<Vec<&str>>().as_slice() {
         [path_str, name_str] => {
             reel_path = PathBuf::from(path_str);
             reel_name = name_str;
