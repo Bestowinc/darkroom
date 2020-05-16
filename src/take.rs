@@ -154,9 +154,10 @@ pub fn process_response<'a>(
     {
         Err(e) => {
             log_mismatch(
-                frame.response.to_colored_tk_json()?,
-                payload_response.to_colored_tk_json()?,
-            );
+                frame.response.to_string_pretty()?,
+                payload_response.to_string_pretty()?,
+            )
+            .context("fn log_mismatch failure")?;
             return Err(Error::from(e));
         }
         Ok(r) => r,
@@ -208,9 +209,6 @@ pub fn process_response<'a>(
         debug!("creating take receipt...");
         fs::write(frame_out, frame.to_string_pretty()?)?;
     }
-    if payload_response != frame.response {
-        error!("OK");
-    }
 
     Ok(cut_register)
 }
@@ -256,20 +254,21 @@ pub fn single_take(cmd: Take, base_params: BaseParams) -> Result<(), Error> {
     Ok(())
 }
 
-fn log_mismatch(frame_str: String, response_str: String) {
+fn log_mismatch(frame_str: String, response_str: String) -> Result<(), Error> {
     error!("{}\n", "Expected:".magenta());
+    dbg!(&frame_str);
     error!(
         "{}\n",
         frame_str
             .to_colored_json_with_styler(ColorMode::default().eval(), get_styler())
-            .expect("log_mismatch expected panic")
+            .context("log_mismatch \"Expected:\" panic")?
     );
     error!("{}\n", "Actual:".magenta());
     error!(
         "{}\n",
         response_str
             .to_colored_json_with_styler(ColorMode::default().eval(), get_styler())
-            .expect("log_mismatch actual panic")
+            .context("log_mismatch \"Actual:\"  panic")?
     );
     error!(
         "{}{}{}",
@@ -277,6 +276,7 @@ fn log_mismatch(frame_str: String, response_str: String) {
         "Form Mismatch 🌋 ".yellow(),
         "====".red()
     );
+    Ok(())
 }
 
 #[cfg(test)]
