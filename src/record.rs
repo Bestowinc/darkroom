@@ -19,7 +19,6 @@ pub fn run_record(cmd: Record, base_params: BaseParams) -> Result<(), Error> {
     comp_reg.destructive_merge(vec![cut_register]);
     comp_reels.push(reel);
     cut_register = comp_reg;
-    // ####
 
     // #### Merge init
     // Merge any found PathBufs into the cut register destructively
@@ -30,7 +29,6 @@ pub fn run_record(cmd: Record, base_params: BaseParams) -> Result<(), Error> {
         .map(Register::from)
         .collect();
     &cut_register.destructive_merge(merge_cuts?);
-    // ####
 
     for meta_frame in comp_reels.into_iter().flatten() {
         // if cmd.output is Some, provide a take PathBuf
@@ -82,7 +80,7 @@ where
     if let Some(path) = cut_out {
         // announce that write_cut is dumping a failed record register
         if failed_response {
-            error!("{}", "take aborted! writing to --cut_out provided...".red());
+            error!("{}", "take aborted! writing to --cut-out provided...".red());
         }
         // write with a hidden cut if directory w,as provided
         if path.is_dir() {

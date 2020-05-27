@@ -15,7 +15,7 @@ use filmreel::{
     reel::MetaFrame,
     FrError, ToStringHidden, ToStringPretty,
 };
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use prettytable::*;
 use serde::Serialize;
 use std::convert::TryFrom;
@@ -23,6 +23,7 @@ use std::fs;
 use std::io::{self, prelude::*};
 use std::path::PathBuf;
 
+/// get_styler returns the custom syntax values for stdout json
 fn get_styler() -> Styler {
     Styler {
         bool_value: Colour::Purple.normal(),
@@ -134,12 +135,28 @@ pub fn run_request<'a>(
         info!("{}", hidden.to_coloured_tk_json()?);
     }
 
+    let request_fn = match frame.protocol {
+        Protocol::HTTP => http_request,
+        Protocol::GRPC => grpcurl,
+    };
     let params = base_params.init(frame.get_request())?;
-    // Send out the payload here
-    match frame.protocol {
-        Protocol::HTTP => http_request(params, frame.get_request()),
-        Protocol::GRPC => grpcurl(params, frame.get_request()),
+    if let Some(attempts) = params.attempts.clone() {
+        for n in 1..attempts.times {
+            warn!(
+                "attempt [{}/{}] | interval [{}ms]",
+                n, attempts.times, attempts.ms
+            );
+            let param_attempt = params.clone();
+            if let Ok(r) = request_fn(param_attempt, frame.get_request()) {
+                return Ok(r);
+            }
+        }
+        // for final retry attempt do not swallow error propagation
+        warn!("attempt [{fin}/{fin}]", fin = attempts.times);
+        return request_fn(params, frame.get_request());
     }
+
+    request_fn(params, frame.get_request())
 }
 
 pub fn process_response<'a>(
