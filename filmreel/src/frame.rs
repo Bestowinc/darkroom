@@ -1,9 +1,10 @@
-use crate::cut::Register;
-use crate::error::FrError;
-use crate::utils::{get_jql_value, ordered_set, ordered_str_map};
+use crate::{
+    cut::Register,
+    error::FrError,
+    utils::{get_jql_value, ordered_set, ordered_str_map},
+};
 use serde::{Deserialize, Serialize};
-use serde_json::error::Error as SerdeError;
-use serde_json::{json, to_value, Value};
+use serde_json::{error::Error as SerdeError, json, to_value, Value};
 use std::collections::{HashMap, HashSet};
 
 /// Represents the entire deserialized frame file.

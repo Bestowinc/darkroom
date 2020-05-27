@@ -2,13 +2,13 @@ use crate::params::Params;
 use anyhow::{anyhow, Context, Error};
 use filmreel::frame::{Request, Response};
 use http::header::HeaderMap;
-use reqwest::blocking::*;
-use reqwest::Method;
+use reqwest::{blocking::*, Method};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::collections::BTreeMap;
-use std::collections::HashMap;
-use std::convert::TryFrom;
+use std::{
+    collections::{BTreeMap, HashMap},
+    convert::TryFrom,
+};
 use url::Url;
 
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]

@@ -1,13 +1,10 @@
-use crate::params::iter_path_args;
-use crate::params::Params;
+use crate::params::{iter_path_args, Params};
 use anyhow::{anyhow, Context, Error};
 use filmreel::frame::{Request, Response};
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::ffi::OsStr;
-use std::path::PathBuf;
-use std::process::Command;
+use std::{ffi::OsStr, path::PathBuf, process::Command};
 
 /// Checks to see if grpcurl is in the system path
 pub fn validate_grpcurl() -> Result<(), Error> {

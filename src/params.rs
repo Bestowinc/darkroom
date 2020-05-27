@@ -101,8 +101,7 @@ mod tests {
     use super::*;
     use crate::{Command, SubCommand, Version};
     use filmreel::frame::{Frame, Request};
-    use std::ffi::OsStr;
-    use std::path::PathBuf;
+    use std::{ffi::OsStr, path::PathBuf};
 
     #[test]
     fn test_init() {
@@ -148,10 +147,7 @@ mod tests {
                 header: Some("\"Authorization: Bearer BIG_BEAR\"".to_string()),
                 address: "localhost:8000".to_string(),
                 proto: None,
-                attempts: Some(Attempts {
-                    times: 2,
-                    ms: 200
-                }),
+                attempts: Some(Attempts { times: 2, ms: 200 }),
             },
             params
         )

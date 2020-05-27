@@ -1,13 +1,8 @@
-use crate::grpc::grpcurl;
-use crate::http::http_request;
-use crate::params::BaseParams;
-use crate::record::write_cut;
-use crate::Take;
+use crate::{grpc::grpcurl, http::http_request, params::BaseParams, record::write_cut, Take};
 use anyhow::{anyhow, Context, Error};
 use colored::*;
 use colored_diff::PrettyDifference;
-use colored_json::prelude::*;
-use colored_json::{Colour, Styler};
+use colored_json::{prelude::*, Colour, Styler};
 use filmreel as fr;
 use filmreel::{
     cut::Register,
@@ -18,10 +13,12 @@ use filmreel::{
 use log::{debug, error, info, warn};
 use prettytable::*;
 use serde::Serialize;
-use std::convert::TryFrom;
-use std::fs;
-use std::io::{self, prelude::*};
-use std::path::PathBuf;
+use std::{
+    convert::TryFrom,
+    fs,
+    io::{self, prelude::*},
+    path::PathBuf,
+};
 
 /// get_styler returns the custom syntax values for stdout json
 fn get_styler() -> Styler {
@@ -299,9 +296,7 @@ fn log_mismatch(frame_str: String, response_str: String) -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use filmreel::cut::Register;
-    use filmreel::frame::Response;
-    use filmreel::register;
+    use filmreel::{cut::Register, frame::Response, register};
     use serde_json::{self, json};
 
     #[test]

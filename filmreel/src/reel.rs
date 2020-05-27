@@ -1,9 +1,11 @@
 use crate::error::FrError;
 use glob::glob;
-use std::convert::TryFrom;
-use std::iter::FromIterator;
-use std::path::{Path, PathBuf};
-use std::result::Result;
+use std::{
+    convert::TryFrom,
+    iter::FromIterator,
+    path::{Path, PathBuf},
+    result::Result,
+};
 
 /// Represents the sequence of Frames to execute.
 ///

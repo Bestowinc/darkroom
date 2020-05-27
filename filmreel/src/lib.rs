@@ -25,8 +25,7 @@ pub mod utils;
 pub use error::FrError;
 pub use reel::Reel;
 use serde::Serialize;
-use std::fs;
-use std::path::Path;
+use std::{fs, path::Path};
 
 // Convenience in converting a Path to a String
 pub fn file_to_string<P: AsRef<Path>>(path: P) -> std::io::Result<String> {

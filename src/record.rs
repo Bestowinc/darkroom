@@ -1,13 +1,13 @@
-use crate::params::BaseParams;
-use crate::take::*;
-use crate::Record;
+use crate::{params::BaseParams, take::*, Record};
 use anyhow::{anyhow, Context, Error};
 use colored::*;
 use filmreel as fr;
 use fr::{cut::Register, frame::Frame, reel::*, ToStringHidden};
 use log::{debug, error, warn};
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 pub fn run_record(cmd: Record, base_params: BaseParams) -> Result<(), Error> {
     let cut_str = fr::file_to_string(cmd.get_cut_file())?;
