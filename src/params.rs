@@ -30,7 +30,7 @@ pub struct BaseParams {
 #[derive(Clone, Deserialize, Default, Debug, PartialEq)]
 pub struct Attempts {
     pub times: u32,
-    pub ms: u32,
+    pub ms: u64,
 }
 
 impl From<&Command> for BaseParams {

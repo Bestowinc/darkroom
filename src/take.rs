@@ -18,6 +18,7 @@ use std::{
     fs,
     io::{self, prelude::*},
     path::PathBuf,
+    thread, time,
 };
 
 /// get_styler returns the custom syntax values for stdout json
@@ -140,16 +141,24 @@ pub fn run_request<'a>(
     if let Some(attempts) = params.attempts.clone() {
         for n in 1..attempts.times {
             warn!(
-                "attempt [{}/{}] | interval [{}ms]",
-                n, attempts.times, attempts.ms
+                "attempt [{}/{}] | interval [{}{}]",
+                n.to_string().yellow(),
+                attempts.times,
+                attempts.ms,
+                "ms".yellow(),
             );
             let param_attempt = params.clone();
             if let Ok(r) = request_fn(param_attempt, frame.get_request()) {
                 return Ok(r);
             }
+            thread::sleep(time::Duration::from_millis(attempts.ms));
         }
         // for final retry attempt do not swallow error propagation
-        warn!("attempt [{fin}/{fin}]", fin = attempts.times);
+        warn!(
+            "attempt [{}/{}]",
+            attempts.times.to_string().red(),
+            attempts.times
+        );
         return request_fn(params, frame.get_request());
     }
 
