@@ -282,7 +282,6 @@ pub fn single_take(cmd: Take, base_params: BaseParams) -> Result<(), Error> {
 
 fn log_mismatch(frame_str: String, response_str: String) -> Result<(), Error> {
     error!("{}\n", "Expected:".magenta());
-    dbg!(&frame_str);
     error!(
         "{}\n",
         frame_str
