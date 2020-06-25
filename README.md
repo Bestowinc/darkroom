@@ -125,6 +125,10 @@ dark --cut-out >(jq .IP) take ./test_data/post.01s.body.fr.json --cut ./test_dat
 * removed YAML deserialization now that `grpcurl` properly emits JSON errors
 * added retry `attempts` to frame requests: `{"request":{"attempts": {"times": 5, "ms": 500}}}`
 
+#### `0.3.1`:
+
+* frame response body is now optional
+
 
 <!--
 VERSION="0.3.1"
