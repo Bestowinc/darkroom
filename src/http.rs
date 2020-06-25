@@ -73,8 +73,8 @@ fn build_header(header: &str) -> Result<HeaderMap, Error> {
 pub fn http_request(prm: Params, req: Request) -> Result<Response, Error> {
     let response = build_request(prm, req)?.send()?;
     let status = response.status().as_u16() as u32;
-    // reqwest.Response is a private Option<Value> field so we rely on the content_length method
-    // so get the exact byte size of bondy length, set to None if .conent_length() returns None
+    // reqwest.Response is a private Option<Value> field so we rely on the Response.content_length() method
+    // to get the exact body byte size
     let response_body: Option<Value> = match response.content_length() {
         Some(0) | None => None,
         Some(_) => response
