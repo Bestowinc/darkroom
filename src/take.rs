@@ -196,7 +196,10 @@ pub fn process_response<'a>(
         // For now simply run hydrate again to hydrate the newly written cut variables into the
         // Response
         frame.cut.hydrate_writes = true;
-        Frame::hydrate_val(&frame.cut, &mut frame.response.body, &cut_register, false)?;
+
+        if let Some(response_body) = &mut frame.response.body {
+            Frame::hydrate_val(&frame.cut, response_body, &cut_register, false)?;
+        }
         Frame::hydrate_val(&frame.cut, &mut frame.response.etc, &cut_register, false)?;
     }
 
@@ -332,7 +335,7 @@ mod tests {
         )
         .unwrap();
         let payload_response = Response {
-            body: json!("created user: BIG_BEN"),
+            body: Some(json!("created user: BIG_BEN")),
             etc: json!({}),
             status: 200,
         };

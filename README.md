@@ -127,7 +127,7 @@ dark --cut-out >(jq .IP) take ./test_data/post.01s.body.fr.json --cut ./test_dat
 
 
 <!--
-VERSION="0.3.0"
+VERSION="0.3.1"
 cargo build --release && \
 tar czf darkroom-"$VERSION"-x86_64-apple-darwin.tar.gz -C target/release dark && \
 docker run --rm -it -v "$(pwd)":/home/rust/src ekidd/rust-musl-builder cargo build --release && \
