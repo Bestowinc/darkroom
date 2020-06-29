@@ -51,10 +51,10 @@ pub fn run_record(cmd: Record, base_params: BaseParams) -> Result<(), Error> {
         let mut payload_response;
 
         if let Some(attempts) = params.attempts.clone() {
-            for n in 1..attempts.times {
+            for n in 0..attempts.times {
                 warn!(
                     "attempt [{}/{}] | interval [{}{}]",
-                    n.to_string().yellow(),
+                    (n + 1).to_string().yellow(),
                     attempts.times,
                     attempts.ms,
                     "ms".yellow(),
@@ -66,22 +66,10 @@ pub fn run_record(cmd: Record, base_params: BaseParams) -> Result<(), Error> {
                     payload_response,
                     cmd.take_out.as_ref().map(|dir| take_output(&dir, &&meta_frame.path)),
                 ) {
-                    write_cut(
-                        &base_params.cut_out,
-                        &cut_register,
-                        &cmd.reel_name,
-                        false,
-                    )?;
-                    return Ok(());
+                    break;
                 }
                 thread::sleep(time::Duration::from_millis(attempts.ms));
             }
-            warn!(
-                "attempt [{}/{}]",
-                attempts.times.to_string().red(),
-                attempts.times
-            );
-            payload_response = run_request(&mut payload_frame, &cut_register, &base_params)?;
         } else {
             payload_response = run_request(&mut payload_frame, &cut_register, &base_params)?;
         }
