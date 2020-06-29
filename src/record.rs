@@ -59,12 +59,16 @@ pub fn run_record(cmd: Record, base_params: BaseParams) -> Result<(), Error> {
                     attempts.ms,
                     "ms".yellow(),
                 );
-                payload_response = run_request(&mut payload_frame, &cut_register, &base_params)?;
+
+                let mut response_attempt =
+                    run_request(&mut payload_frame, &cut_register, &base_params)?;
                 if let Ok(_r) = process_response(
                     &mut payload_frame,
                     &mut cut_register,
-                    payload_response,
-                    cmd.take_out.as_ref().map(|dir| take_output(&dir, &&meta_frame.path)),
+                    response_attempt,
+                    cmd.take_out
+                        .as_ref()
+                        .map(|dir| take_output(&dir, &&meta_frame.path)),
                 ) {
                     break;
                 }
@@ -72,16 +76,17 @@ pub fn run_record(cmd: Record, base_params: BaseParams) -> Result<(), Error> {
             }
         } else {
             payload_response = run_request(&mut payload_frame, &cut_register, &base_params)?;
-        }
-
-        if let Err(e) = process_response(
-            &mut payload_frame,
-            &mut cut_register,
-            payload_response,
-            cmd.take_out.as_ref().map(|dir| take_output(&dir, &&meta_frame.path)),
-        ) {
-            write_cut(&base_params.cut_out, &cut_register, &cmd.reel_name, true)?;
-            return Err(e);
+            if let Err(e) = process_response(
+                &mut payload_frame,
+                &mut cut_register,
+                payload_response,
+                cmd.take_out
+                    .as_ref()
+                    .map(|dir| take_output(&dir, &&meta_frame.path)),
+            ) {
+                write_cut(&base_params.cut_out, &cut_register, &cmd.reel_name, true)?;
+                return Err(e);
+            }
         }
     }
 
