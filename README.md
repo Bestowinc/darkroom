@@ -129,9 +129,13 @@ dark --cut-out >(jq .IP) take ./test_data/post.01s.body.fr.json --cut ./test_dat
 
 * frame response body is now optional
 
+#### `0.3.2`:
+
+* frame retry attempts now apply to response mismatch
+
 
 <!--
-VERSION="0.3.1"
+VERSION="0.3.2"
 DR_DIR=$PWD
 GRPCURL_DIR=${GRPCURL_DIR:-../grpcurl}
 cargo build --release && \
