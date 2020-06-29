@@ -33,10 +33,6 @@ pub fn run_record(cmd: Record, base_params: BaseParams) -> Result<(), Error> {
 
     for meta_frame in comp_reels.into_iter().flatten() {
         // if cmd.output is Some, provide a take PathBuf
-        let output = cmd
-            .take_out
-            .as_ref()
-            .map(|dir| take_output(&dir, &&meta_frame.path));
         warn!(
             "{} {:?}",
             "File:".yellow(),
@@ -68,7 +64,7 @@ pub fn run_record(cmd: Record, base_params: BaseParams) -> Result<(), Error> {
                     &mut payload_frame,
                     &mut cut_register,
                     payload_response,
-                    cmd.take_out.clone(),
+                    cmd.take_out.as_ref().map(|dir| take_output(&dir, &&meta_frame.path)),
                 ) {
                     write_cut(
                         &base_params.cut_out,
@@ -94,7 +90,7 @@ pub fn run_record(cmd: Record, base_params: BaseParams) -> Result<(), Error> {
             &mut payload_frame,
             &mut cut_register,
             payload_response,
-            output,
+            cmd.take_out.as_ref().map(|dir| take_output(&dir, &&meta_frame.path)),
         ) {
             write_cut(&base_params.cut_out, &cut_register, &cmd.reel_name, true)?;
             return Err(e);
