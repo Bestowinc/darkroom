@@ -7,6 +7,7 @@ use log::{debug, error, warn};
 use std::{
     fs,
     path::{Path, PathBuf},
+    thread, time,
 };
 
 pub fn run_record(cmd: Record, base_params: BaseParams) -> Result<(), Error> {
@@ -50,7 +51,45 @@ pub fn run_record(cmd: Record, base_params: BaseParams) -> Result<(), Error> {
         // Frame to be mutably borrowed
         let mut payload_frame = frame.clone();
 
-        let payload_response = run_request(&mut payload_frame, &cut_register, &base_params)?;
+        let params = base_params.init(frame.get_request())?;
+        let mut payload_response;
+
+        if let Some(attempts) = params.attempts.clone() {
+            for n in 1..attempts.times {
+                warn!(
+                    "attempt [{}/{}] | interval [{}{}]",
+                    n.to_string().yellow(),
+                    attempts.times,
+                    attempts.ms,
+                    "ms".yellow(),
+                );
+                payload_response = run_request(&mut payload_frame, &cut_register, &base_params)?;
+                if let Ok(_r) = process_response(
+                    &mut payload_frame,
+                    &mut cut_register,
+                    payload_response,
+                    cmd.take_out.clone(),
+                ) {
+                    write_cut(
+                        &base_params.cut_out,
+                        &cut_register,
+                        &cmd.reel_name,
+                        false,
+                    )?;
+                    return Ok(());
+                }
+                thread::sleep(time::Duration::from_millis(attempts.ms));
+            }
+            warn!(
+                "attempt [{}/{}]",
+                attempts.times.to_string().red(),
+                attempts.times
+            );
+            payload_response = run_request(&mut payload_frame, &cut_register, &base_params)?;
+        } else {
+            payload_response = run_request(&mut payload_frame, &cut_register, &base_params)?;
+        }
+
         if let Err(e) = process_response(
             &mut payload_frame,
             &mut cut_register,
