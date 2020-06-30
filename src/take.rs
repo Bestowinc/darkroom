@@ -24,6 +24,7 @@ use std::{
     thread, time,
 };
 
+// run_request decides which protocol to use for sending a hydrated Frame Request
 pub fn run_request<'a>(params: &Params, frame: &'a mut Frame) -> Result<Response, Error> {
     let request_fn = match frame.protocol {
         Protocol::HTTP => http_request,
@@ -32,6 +33,9 @@ pub fn run_request<'a>(params: &Params, frame: &'a mut Frame) -> Result<Response
     request_fn(params.clone(), frame.get_request())
 }
 
+// process_response grabs the expected Response from the given Frame and attempts to match the values
+// present in the payload Response printing a "Value Mismatch" diff to stdout and returning an
+// error if there is not a complete match
 pub fn process_response<'a>(
     frame: &'a mut Frame,
     cut_register: &'a mut Register,
@@ -253,6 +257,8 @@ pub fn single_take(cmd: Take, base_params: BaseParams) -> Result<(), Error> {
     Ok(())
 }
 
+// log_mismatch provides the "Form Mismatch" diff when the returned payload Response does not match
+// the expected object structure of the Frame Response
 fn log_mismatch(frame_response: &Response, payload_response: &Response) -> Result<(), Error> {
     error!("{}\n", "Expected:".magenta());
     error!(
