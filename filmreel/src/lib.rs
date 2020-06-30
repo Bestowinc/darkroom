@@ -11,7 +11,7 @@ Add the following to the Cargo.toml of your project:
 
 ```toml
 [dependencies]
-filmreel = "0.2"
+filmreel = "0.3"
 ```
 
 */
@@ -56,8 +56,8 @@ impl<T> ToStringHidden for T
 where
     T: ?Sized + Serialize,
 {
-    /// Pretty formatting for Register serialization, any variables starting with an underscore as
-    /// it's value hidden
+    /// Pretty formatting for Register serialization, any cut variable names starting with an underscore are
+    /// presented as `${_HIDDEN}` in stdout
     fn to_string_hidden(&self) -> Result<String, FrError> {
         let val = match serde_json::to_value(self)? {
             serde_json::Value::Object(mut map) => {
