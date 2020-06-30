@@ -250,7 +250,7 @@ trait ToTakeColouredJson {
 
 impl<T> ToTakeColouredJson for T
 where
-    T: ToStringPretty,
+    T: ?Sized + Serialize,
 {
     fn to_coloured_tk_json(&self) -> Result<String, FrError> {
         Ok(self
@@ -260,13 +260,12 @@ where
 }
 
 trait ToTakeHiddenColouredJson: ToTakeColouredJson {
-    // fn to_colored_json(&self) -> Result<String, FrError>;
     fn to_hidden_tk_json(&self) -> Result<String, FrError>;
 }
 
 impl<T> ToTakeHiddenColouredJson for T
 where
-    T: ToStringHidden + Serialize,
+    T: ?Sized + Serialize,
 {
     fn to_hidden_tk_json(&self) -> Result<String, FrError> {
         Ok(self

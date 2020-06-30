@@ -3,7 +3,7 @@ use crate::{
     http::http_request,
     params::{BaseParams, Params},
     record::write_cut,
-    Take, ToStringHidden, ToStringPretty, ToTakeColouredJson,
+    Take, ToStringPretty, ToTakeColouredJson, ToTakeHiddenColouredJson,
 };
 use anyhow::{anyhow, Context, Error};
 use colored::*;
@@ -29,7 +29,6 @@ pub fn run_request<'a>(params: &Params, frame: &'a mut Frame) -> Result<Response
         Protocol::HTTP => http_request,
         Protocol::GRPC => grpcurl,
     };
-    dbg!(params);
     request_fn(params.clone(), frame.get_request())
 }
 
@@ -160,7 +159,7 @@ pub fn run_take(
             unhydrated_frame
                 .expect("None for unhydrated_frame")
                 .to_coloured_tk_json()?,
-            register.to_string_hidden()?,
+            register.to_hidden_tk_json()?,
             hidden.to_coloured_tk_json()?,
         ]);
         table.printstd();
