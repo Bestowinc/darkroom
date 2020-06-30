@@ -107,13 +107,14 @@ pub fn process_response<'a>(
 }
 
 /// run_take
-/// 1. initializes settings for the take using base_params.init(frame.get_request())
+/// 1. initializes cli settings for the take using base_params
 /// 2. performs a single frame hydration using a given json file
-/// 3. runs a request and processes the response, multiple times if attempts are present in the Params object
-/// 4. Outputs a diff to stdout and returns an error if there is a mismatch:
-///     - Form Mismatch is output during run_request when the returned JSON does not match the
+/// 3. initializes frame specific settings for the take using base_params.init(frame.get_request())
+/// 4. runs a request and processes the response, multiple times if attempts are present in the Params object
+/// 5. Outputs a diff to stdout and returns an error if there is a mismatch:
+///    - Form Mismatch: output during run_request when the returned JSON does not match the
 ///     expected structure
-///    - Value Mismatch is output during process_response when the returned JSON values do not
+///    - Value Mismatch: output during process_response when the returned JSON values do not
 ///    match
 pub fn run_take(
     frame: &mut Frame,
@@ -142,7 +143,6 @@ pub fn run_take(
     frame.hydrate(&register, false)?;
     // init params after hydration so that  cut register params can be pulled otherwise this can
     // happen: Params { address: "${ADDRESS}", }
-
     let params = base_params.init(frame.get_request())?;
 
     if interactive {
@@ -218,7 +218,7 @@ pub fn run_take(
     }
 }
 
-/// Run single take using the darkroom::Take struct
+/// single_take runs a single take using the darkroom::Take struct
 pub fn single_take(cmd: Take, base_params: BaseParams) -> Result<(), Error> {
     let frame_str = fr::file_to_string(&cmd.frame)?;
     let cut_str = fr::file_to_string(&cmd.cut)?;

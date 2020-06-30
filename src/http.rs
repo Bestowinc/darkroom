@@ -18,7 +18,7 @@ struct Form {
     form: BTreeMap<String, Value>,
 }
 
-/// Parses a Frame Request and a Params object to send a HTTP payload using reqwest
+/// build_request parses a Frame Request and a Params object to send a HTTP payload using reqwest
 pub fn build_request(prm: Params, req: Request) -> Result<RequestBuilder, Error> {
     let method: Method;
     let endpoint: Url;
@@ -62,7 +62,7 @@ pub fn build_request(prm: Params, req: Request) -> Result<RequestBuilder, Error>
     Ok(builder)
 }
 
-/// Builds a header map from the header arg passed in from a ::Take or ::Record struct
+/// build_header constructs a header map from the header arg passed in from a ::Take or ::Record struct
 fn build_header(header: &str) -> Result<HeaderMap, Error> {
     let map: HashMap<String, String> = serde_json::from_str(header)?;
     match HeaderMap::try_from(&map) {
@@ -71,6 +71,8 @@ fn build_header(header: &str) -> Result<HeaderMap, Error> {
     }
 }
 
+// http_request is used by run_request to send an http request and deserialize the returned data
+// into a Response struct
 pub fn http_request(prm: Params, req: Request) -> Result<Response, Error> {
     let response = build_request(prm, req)?.send()?;
     let status = response.status().as_u16() as u32;
