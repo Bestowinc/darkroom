@@ -1,18 +1,21 @@
-use crate::{grpc::grpcurl, http::http_request, params::BaseParams, record::write_cut, Take};
+use crate::{
+    grpc::grpcurl,
+    http::http_request,
+    params::{BaseParams, Params},
+    record::write_cut,
+    Take, ToStringHidden, ToStringPretty, ToTakeColouredJson,
+};
 use anyhow::{anyhow, Context, Error};
 use colored::*;
 use colored_diff::PrettyDifference;
-use colored_json::{prelude::*, Colour, Styler};
 use filmreel as fr;
 use filmreel::{
     cut::Register,
     frame::{Frame, Protocol, Response},
     reel::MetaFrame,
-    FrError, ToStringHidden, ToStringPretty,
 };
 use log::{debug, error, info, warn};
 use prettytable::*;
-use serde::Serialize;
 use std::{
     convert::TryFrom,
     fs,
@@ -21,148 +24,13 @@ use std::{
     thread, time,
 };
 
-/// get_styler returns the custom syntax values for stdout json
-fn get_styler() -> Styler {
-    Styler {
-        bool_value: Colour::Purple.normal(),
-        float_value: Colour::RGB(255, 123, 0).normal(),
-        integer_value: Colour::RGB(255, 123, 0).normal(),
-        nil_value: Colour::Cyan.normal(),
-        string_include_quotation: false,
-        ..Default::default()
-    }
-}
-
-trait ToTakeColouredJson {
-    fn to_coloured_tk_json(&self) -> Result<String, FrError>;
-}
-
-impl<T> ToTakeColouredJson for T
-where
-    T: ToStringPretty,
-{
-    fn to_coloured_tk_json(&self) -> Result<String, FrError> {
-        Ok(self
-            .to_string_pretty()?
-            .to_colored_json_with_styler(ColorMode::default().eval(), get_styler())?)
-    }
-}
-
-trait ToTakeHiddenColouredJson: ToTakeColouredJson {
-    // fn to_colored_json(&self) -> Result<String, FrError>;
-    fn to_hidden_tk_json(&self) -> Result<String, FrError>;
-}
-
-impl<T> ToTakeHiddenColouredJson for T
-where
-    T: ToStringHidden + Serialize,
-{
-    fn to_hidden_tk_json(&self) -> Result<String, FrError> {
-        Ok(self
-            .to_string_hidden()?
-            .to_colored_json_with_styler(ColorMode::default().eval(), get_styler())?)
-    }
-}
-
-/// Performs a single frame hydration using a given json file and outputs a Take to either stdout
-/// or a designated file
-pub fn run_request<'a>(
-    frame: &'a mut Frame,
-    register: &'a Register,
-    base_params: &BaseParams,
-) -> Result<Response, Error> {
-    let interactive = base_params.interactive;
-    let verbose = base_params.verbose;
-
-    let mut unhydrated_frame: Option<Frame> = None;
-    let hidden_frame: Option<Frame> = if interactive || verbose {
-        unhydrated_frame = Some(frame.clone());
-        let mut hydrated = frame.clone();
-        hydrated.hydrate(&register, true)?;
-        Some(hydrated)
-    } else {
-        None
-    };
-    info!("[{}] frame:", "Unhydrated".red());
-    info!("{}", frame.to_coloured_tk_json()?);
-    info!("{}", "=======================".magenta());
-    info!("HYDRATING...");
-    info!("{}", "=======================".magenta());
-
-    frame.hydrate(&register, false)?;
-
-    if interactive {
-        let mut stdin = io::stdin();
-        let mut stdout = io::stdout();
-        let mut table = Table::new();
-        table.add_row(row![
-            format!("[{}] frame", "Unhydrated".red()),
-            format!("[{}]", "Cut Register".yellow()),
-            format!("[{}] frame", "Hydrated".green()),
-        ]);
-
-        let hidden = match hidden_frame {
-            Some(f) => f,
-            None => return Err(anyhow!("None for interactive hidden_frame")),
-        };
-        table.add_row(row![
-            unhydrated_frame
-                .expect("None for unhydrated_frame")
-                .to_coloured_tk_json()?,
-            register.to_hidden_tk_json()?,
-            hidden.to_coloured_tk_json()?,
-        ]);
-        table.printstd();
-        write!(
-            stdout,
-            "{}",
-            format!("Press {} to continue...", "ENTER".yellow())
-        )
-        .expect("write to stdout panic");
-        stdout.flush().expect("stdout flush panic");
-
-        // Read a single byte and discard
-        let _ = stdin.read(&mut [0u8]).expect("read stdin panic");
-    } else if verbose {
-        let hidden = match hidden_frame {
-            Some(f) => f,
-            None => return Err(anyhow!("None for interactive hidden_frame")),
-        };
-        info!("{} {}", "Request URI:".yellow(), frame.get_request_uri()?);
-        info!("[{}] frame:", "Hydrated".green());
-        info!("{}", hidden.to_coloured_tk_json()?);
-    }
-
+pub fn run_request<'a>(params: &Params, frame: &'a mut Frame) -> Result<Response, Error> {
     let request_fn = match frame.protocol {
         Protocol::HTTP => http_request,
         Protocol::GRPC => grpcurl,
     };
-    let params = base_params.init(frame.get_request())?;
-    if let Some(attempts) = params.attempts.clone() {
-        for n in 1..attempts.times {
-            warn!(
-                "attempt [{}/{}] | interval [{}{}]",
-                n.to_string().yellow(),
-                attempts.times,
-                attempts.ms,
-                "ms".yellow(),
-            );
-            let param_attempt = params.clone();
-            if let Ok(r) = request_fn(param_attempt, frame.get_request()) {
-                return Ok(r);
-            }
-            thread::sleep(time::Duration::from_millis(attempts.ms));
-        }
-        // for final retry attempt do not swallow error propagation
-        warn!(
-            "attempt [{}/{}]",
-            attempts.times.to_string().red(),
-            attempts.times
-        );
-        return request_fn(params, frame.get_request());
-    }
-
-    request_fn(params, frame.get_request())
+    dbg!(params);
+    request_fn(params.clone(), frame.get_request())
 }
 
 pub fn process_response<'a>(
@@ -176,11 +44,7 @@ pub fn process_response<'a>(
         .match_payload_response(&frame.cut, &payload_response)
     {
         Err(e) => {
-            log_mismatch(
-                frame.response.to_string_pretty()?,
-                payload_response.to_string_pretty()?,
-            )
-            .context("fn log_mismatch failure")?;
+            log_mismatch(&frame.response, &payload_response).context("fn log_mismatch failure")?;
             return Err(Error::from(e));
         }
         Ok(r) => r,
@@ -239,6 +103,118 @@ pub fn process_response<'a>(
     Ok(cut_register)
 }
 
+/// run_take
+/// 1. initializes settings for the take using base_params.init(frame.get_request())
+/// 2. performs a single frame hydration using a given json file
+/// 3. runs a request and processes the response, multiple times if attempts are present in the Params object
+/// 4. Outputs a diff to stdout and returns an error if there is a mismatch:
+///     - Form Mismatch is output during run_request when the returned JSON does not match the
+///     expected structure
+///    - Value Mismatch is output during process_response when the returned JSON values do not
+///    match
+pub fn run_take(
+    frame: &mut Frame,
+    register: &mut Register,
+    base_params: &BaseParams,
+    output: Option<PathBuf>,
+) -> Result<(), Error> {
+    let interactive = base_params.interactive;
+    let verbose = base_params.verbose;
+    let mut unhydrated_frame: Option<Frame> = None;
+    // hidden_frame is meant to sanitize ${_HIDDEN} variables
+    let hidden_frame: Option<Frame> = if interactive || verbose {
+        unhydrated_frame = Some(frame.clone());
+        let mut hydrated = frame.clone();
+        hydrated.hydrate(&register, true)?;
+        Some(hydrated)
+    } else {
+        None
+    };
+
+    info!("[{}] frame:", "Unhydrated".red());
+    info!("{}", frame.to_coloured_tk_json()?);
+    info!("{}", "=======================".magenta());
+    info!("HYDRATING...");
+    info!("{}", "=======================".magenta());
+    frame.hydrate(&register, false)?;
+    // init params after hydration so that  cut register params can be pulled otherwise this can
+    // happen: Params { address: "${ADDRESS}", }
+
+    let params = base_params.init(frame.get_request())?;
+
+    if interactive {
+        let mut stdin = io::stdin();
+        let mut stdout = io::stdout();
+        let mut table = Table::new();
+        table.add_row(row![
+            format!("[{}] frame", "Unhydrated".red()),
+            format!("[{}]", "Cut Register".yellow()),
+            format!("[{}] frame", "Hydrated".green()),
+        ]);
+
+        let hidden = match hidden_frame {
+            Some(f) => f,
+            None => return Err(anyhow!("None for interactive hidden_frame")),
+        };
+        table.add_row(row![
+            unhydrated_frame
+                .expect("None for unhydrated_frame")
+                .to_coloured_tk_json()?,
+            register.to_string_hidden()?,
+            hidden.to_coloured_tk_json()?,
+        ]);
+        table.printstd();
+        write!(
+            stdout,
+            "{}",
+            format!("Press {} to continue...", "ENTER".yellow())
+        )
+        .expect("write to stdout panic");
+        stdout.flush().expect("stdout flush panic");
+
+        // Read a single byte and discard
+        let _ = stdin.read(&mut [0u8]).expect("read stdin panic");
+    } else if verbose {
+        let hidden = match hidden_frame {
+            Some(f) => f,
+            None => return Err(anyhow!("None for interactive hidden_frame")),
+        };
+        info!("{} {}", "Request URI:".yellow(), frame.get_request_uri()?);
+        info!("[{}] frame:", "Hydrated".green());
+        info!("{}", hidden.to_coloured_tk_json()?);
+    }
+
+    if let Some(attempts) = params.attempts {
+        for n in 1..attempts.times {
+            warn!(
+                "attempt [{}/{}] | interval [{}{}]",
+                n.to_string().yellow(),
+                attempts.times,
+                attempts.ms,
+                "ms".yellow(),
+            );
+            if let Ok(response) = run_request(&params, frame) {
+                if process_response(frame, register, response, output.clone()).is_ok() {
+                    return Ok(());
+                }
+            }
+            thread::sleep(time::Duration::from_millis(attempts.ms));
+        }
+        // for final retry attempt do not swallow error propagation
+        warn!(
+            "attempt [{}/{}]",
+            attempts.times.to_string().red(),
+            attempts.times
+        );
+    }
+
+    let response = run_request(&params, frame)?;
+    match process_response(frame, register, response, output) {
+        Ok(_) => Ok(()),
+        Err(e) => Err(e),
+    }
+}
+
 /// Run single take using the darkroom::Take struct
 pub fn single_take(cmd: Take, base_params: BaseParams) -> Result<(), Error> {
     let frame_str = fr::file_to_string(&cmd.frame)?;
@@ -253,12 +229,10 @@ pub fn single_take(cmd: Take, base_params: BaseParams) -> Result<(), Error> {
     )?;
     let mut payload_frame = frame.clone();
     let mut cut_register = Register::from(&cut_str)?;
-    let payload_response = run_request(&mut payload_frame, &cut_register, &base_params)?;
-
-    if let Err(e) = process_response(
+    if let Err(e) = run_take(
         &mut payload_frame,
         &mut cut_register,
-        payload_response,
+        &base_params,
         cmd.take_out.clone(),
     ) {
         write_cut(
@@ -280,19 +254,19 @@ pub fn single_take(cmd: Take, base_params: BaseParams) -> Result<(), Error> {
     Ok(())
 }
 
-fn log_mismatch(frame_str: String, response_str: String) -> Result<(), Error> {
+fn log_mismatch(frame_response: &Response, payload_response: &Response) -> Result<(), Error> {
     error!("{}\n", "Expected:".magenta());
     error!(
         "{}\n",
-        frame_str
-            .to_colored_json_with_styler(ColorMode::default().eval(), get_styler())
+        frame_response
+            .to_coloured_tk_json()
             .context("log_mismatch \"Expected:\" serialization")?
     );
     error!("{}\n", "Actual:".magenta());
     error!(
         "{}\n",
-        response_str
-            .to_colored_json_with_styler(ColorMode::default().eval(), get_styler())
+        payload_response
+            .to_coloured_tk_json()
             .context("log_mismatch \"Actual:\"  serialization")?
     );
     error!(

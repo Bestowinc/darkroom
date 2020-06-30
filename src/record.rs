@@ -50,13 +50,7 @@ pub fn run_record(cmd: Record, base_params: BaseParams) -> Result<(), Error> {
         // Frame to be mutably borrowed
         let mut payload_frame = frame.clone();
 
-        let payload_response = run_request(&mut payload_frame, &cut_register, &base_params)?;
-        if let Err(e) = process_response(
-            &mut payload_frame,
-            &mut cut_register,
-            payload_response,
-            output,
-        ) {
+        if let Err(e) = run_take(&mut payload_frame, &mut cut_register, &base_params, output) {
             write_cut(&base_params.cut_out, &cut_register, &cmd.reel_name, true)?;
             return Err(e);
         }
