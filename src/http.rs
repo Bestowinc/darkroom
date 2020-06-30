@@ -71,9 +71,9 @@ fn build_header(header: &str) -> Result<HeaderMap, Error> {
     }
 }
 
-// http_request is used by run_request to send an http request and deserialize the returned data
+// request is used by run_request to send an http request and deserialize the returned data
 // into a Response struct
-pub fn http_request(prm: Params, req: Request) -> Result<Response, Error> {
+pub fn request(prm: Params, req: Request) -> Result<Response, Error> {
     let response = build_request(prm, req)?.send()?;
     let status = response.status().as_u16() as u32;
     // reqwest.Response is a private Option<Value> field so we rely on
@@ -86,7 +86,7 @@ pub fn http_request(prm: Params, req: Request) -> Result<Response, Error> {
         }
         Some(_) => response
             .json()
-            .context("http_request response.json() decode failure")?,
+            .context("http::request response.json() decode failure")?,
     };
 
     Ok(Response {

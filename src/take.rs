@@ -1,6 +1,5 @@
 use crate::{
-    grpc::grpcurl,
-    http::http_request,
+    grpc, http,
     params::{BaseParams, Params},
     record::write_cut,
     Take, ToStringPretty, ToTakeColouredJson, ToTakeHiddenColouredJson,
@@ -27,8 +26,8 @@ use std::{
 // run_request decides which protocol to use for sending a hydrated Frame Request
 pub fn run_request<'a>(params: &Params, frame: &'a mut Frame) -> Result<Response, Error> {
     let request_fn = match frame.protocol {
-        Protocol::HTTP => http_request,
-        Protocol::GRPC => grpcurl,
+        Protocol::HTTP => http::request,
+        Protocol::GRPC => grpc::request,
     };
     request_fn(params.clone(), frame.get_request())
 }

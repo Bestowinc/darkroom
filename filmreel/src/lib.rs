@@ -62,7 +62,7 @@ where
         let val = match serde_json::to_value(self)? {
             serde_json::Value::Object(mut map) => {
                 for (k, v) in map.iter_mut() {
-                    if k.starts_with("_") {
+                    if k.starts_with('_') {
                         *v = serde_json::Value::String("${_HIDDEN}".to_string());
                     }
                 }
