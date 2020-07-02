@@ -41,16 +41,14 @@ pub fn process_response<'a>(
     payload_response: Response,
     output: Option<PathBuf>,
 ) -> Result<&'a Register, Error> {
-    let payload_matches = match frame
+    let payload_matches = frame
         .response
         .match_payload_response(&frame.cut, &payload_response)
-    {
-        Err(e) => {
+        .map_err(Error::from)
+        .or_else(|e| {
             log_mismatch(&frame.response, &payload_response).context("fn log_mismatch failure")?;
-            return Err(Error::from(e));
-        }
-        Ok(r) => r,
-    };
+            return Err(e);
+        })?;
 
     // If there are valid matches for write operations
     if let Some(matches) = payload_matches {
@@ -80,7 +78,7 @@ pub fn process_response<'a>(
         error!(
             "{}{}{}",
             "= ".red(),
-            "Value Mismatch 🤷‍♀️ ".yellow(),
+            "Value Mismatch 🤷".yellow(),
             "===".red()
         );
         return Err(anyhow!("request/response mismatch"));
