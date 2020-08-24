@@ -47,12 +47,7 @@ impl Reel {
     pub fn success_only(self) -> Self {
         Self {
             dir: self.dir,
-            frames: self
-                .frames
-                .clone()
-                .into_iter()
-                .filter(|x| x.is_success())
-                .collect(),
+            frames: self.frames.into_iter().filter(|x| x.is_success()).collect(),
         }
     }
 

@@ -34,7 +34,7 @@ pub fn run_record(cmd: Record, base_params: BaseParams) -> Result<(), Error> {
         .flat_map(fr::file_to_string)
         .map(Register::from)
         .collect();
-    &cut_register.destructive_merge(merge_cuts?);
+    cut_register.destructive_merge(merge_cuts?);
 
     for meta_frame in comp_reels.into_iter().flatten() {
         // if cmd.output is Some, provide a take PathBuf
@@ -115,7 +115,7 @@ pub fn init_components(components: Vec<String>) -> Result<(Vec<Reel>, Register),
     for comp in components {
         let (reel, register) = parse_component(comp)?;
         // TODO implement single merge
-        &comp_reg.destructive_merge(vec![register]);
+        comp_reg.destructive_merge(vec![register]);
         reels.push(reel);
     }
 
