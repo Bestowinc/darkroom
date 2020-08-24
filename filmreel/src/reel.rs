@@ -20,14 +20,13 @@ pub struct Reel {
 
 impl Reel {
     /// A new reel is created from a provided Path or PathBuf
-    pub fn new<P: AsRef<Path>>(
-        dir: P,
-        reel_name: &str,
-        range: Option<Range<u32>>,
-    ) -> Result<Self, FrError> {
-        let dir_glob = dir.as_ref().join(format!("{}.*.*.fr.json", reel_name));
+    pub fn new<P>(dir: P, reel_name: &str, range: Option<Range<u32>>) -> Result<Self, FrError>
+    where
+        P: AsRef<Path>,
+    {
+        let dir_glob = Self::get_frame_dir_glob(&dir, reel_name);
 
-        let mut frames = Reel::get_metaframes(&dir_glob, range)?;
+        let mut frames = Self::get_metaframes(&dir_glob, range)?;
 
         // sort by string value since sorting by f32 is not idiomatic
         frames.sort_by(|a, b| a.path.cmp(&b.path));
@@ -57,6 +56,23 @@ impl Reel {
         }
     }
 
+    // get_frame_dir_glob returns a glob pattern corresponding to all the Frame JSON files contained in
+    // the path directory provided non-recursively
+    pub fn get_frame_dir_glob<P>(dir: P, reel_name: &str) -> PathBuf
+    where
+        P: AsRef<Path>,
+    {
+        let dir_ref = dir.as_ref();
+        if !dir_ref.is_dir() {
+            panic!(
+                "dir argument to get_frame_dir_glob is not a directory: {}",
+                dir_ref.to_string_lossy().to_string(),
+            );
+        }
+
+        dir_ref.join(format!("{}.*.*.fr.json", reel_name))
+    }
+
     /// get_metaframes takes a directory glob ref and a possible range, returning a vector of
     /// MetaFrames
     fn get_metaframes<T>(dir_glob: T, range: Option<Range<u32>>) -> Result<Vec<MetaFrame>, FrError>
@@ -71,7 +87,7 @@ impl Reel {
         let mut frames = Vec::new();
 
         for entry in glob(dir_glob.as_ref().to_str().unwrap())
-            .expect("Failed to read glob pattern")
+            .map_err(|e| FrError::ReelParsef("PatternError: {}", e.to_string()))?
             .filter_map(|r| r.ok())
             .filter(|path| path.is_file())
         {

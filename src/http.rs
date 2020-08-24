@@ -49,7 +49,6 @@ pub fn build_request(prm: Params, req: Request) -> Result<RequestBuilder, Error>
         Err(e) => return Err(Error::from(e)),
     }
 
-    // TODO dedupe these two parts
     match req.get_etc().get("form") {
         Some(Value::Object(f)) => builder = builder.form(&f),
         Some(Value::Null) | None => {}
@@ -67,23 +66,6 @@ pub fn build_request(prm: Params, req: Request) -> Result<RequestBuilder, Error>
     }
     Ok(builder)
 }
-
-// TODO pass in reqwest::RequestBuilder::{query,form} as methods
-//
-// fn build_from_etc<F>(
-//     val: Value,
-//     key: &str,
-//     builder: RequestBuilder,
-//     builder_method: F,
-// ) -> Result<RequestBuilder, Error>
-// where
-//     // T: Serialize + ?Sized,
-//     F: FnOnce(RequestBuilder, &BuilderParam) -> RequestBuilder,
-// {
-//     let val: BuilderParam = serde_json::from_value(val)
-//         .context(format!("request[\"{}\"] must be a key value map", key))?;
-//     Ok(builder_method(builder, &val))
-// }
 
 /// build_header constructs a header map from the header arg passed in from a ::Take or ::Record struct
 fn build_header(header: &str) -> Result<HeaderMap, Error> {
