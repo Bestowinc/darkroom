@@ -163,7 +163,7 @@ where
 {
     match str_range
         .as_ref()
-        .splitn(3, ':')
+        .splitn(2, ':')
         .collect::<Vec<&str>>()
         .as_slice()
     {
