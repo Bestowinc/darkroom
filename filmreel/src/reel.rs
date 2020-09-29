@@ -20,11 +20,12 @@ pub struct Reel {
 
 impl Reel {
     /// A new reel is created from a provided Path or PathBuf
-    pub fn new<P>(dir: P, reel_name: &str, range: Option<Range<u32>>) -> Result<Self, FrError>
+    pub fn new<P, S>(dir: P, reel_name: S, range: Option<Range<u32>>) -> Result<Self, FrError>
     where
         P: AsRef<Path>,
+        S: AsRef<str>,
     {
-        let dir_glob = Self::get_frame_dir_glob(&dir, reel_name);
+        let dir_glob = Self::get_frame_dir_glob(&dir, reel_name.as_ref());
 
         let mut frames = Self::get_metaframes(&dir_glob, range)?;
 

@@ -47,7 +47,7 @@ pub fn process_response<'a>(
         .map_err(Error::from)
         .or_else(|e| {
             log_mismatch(&frame.response, &payload_response).context("fn log_mismatch failure")?;
-            return Err(e);
+            Err(e)
         })?;
 
     // If there are valid matches for write operations

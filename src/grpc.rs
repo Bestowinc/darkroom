@@ -54,11 +54,6 @@ pub fn request(prm: Params, req: Request) -> Result<Response, Error> {
         .output()
         .context("failed to execute grpcurl process")?;
 
-    if req_cmd.stderr.len() > 0 {
-        let grpcurl_err_msg = String::from_utf8(req_cmd.stderr.clone())?;
-        return Err(anyhow!(grpcurl_err_msg).context("grpcurl error"));
-    }
-
     let response: Response = match req_cmd.status.code() {
         Some(0) => Response {
             body: serde_json::from_slice(&req_cmd.stdout)?,
@@ -66,7 +61,13 @@ pub fn request(prm: Params, req: Request) -> Result<Response, Error> {
             etc: json!({}),
         },
         Some(_) => {
-            let err: ResponseError = serde_json::from_slice(&req_cmd.stderr)?;
+            let err: ResponseError = match serde_json::from_slice(&req_cmd.stderr) {
+                Ok(e) => e,
+                Err(_) => {
+                    let grpcurl_err_msg = String::from_utf8(req_cmd.stderr.clone())?;
+                    return Err(anyhow!(grpcurl_err_msg).context("grpcurl error"));
+                }
+            };
             // create frame response from deserialized grpcurl error
             Response {
                 body: Some(serde_json::Value::String(err.message)),
