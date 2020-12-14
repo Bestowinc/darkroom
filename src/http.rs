@@ -37,7 +37,16 @@ pub fn build_request(prm: Params, req: Request) -> Result<RequestBuilder, Error>
     {
         [method_str, tail_str] => {
             method = Method::from_bytes(method_str.as_bytes())?;
-            endpoint = Url::parse(prm.address.as_str())?.join(tail_str)?;
+            let entrypoint = prm.address.clone();
+            endpoint = Url::parse(&entrypoint)
+                .context(format!("base url: {}", entrypoint))?
+                .join(tail_str)
+                .context(format!(
+                    "base url: {},
+This is the case if the scheme and : delimiter are not followed by a / slash,
+as is typically the case of 'data:' mailto: URLs, and localhost without a leading http:// or https://",
+                    entrypoint
+                ))?;
         }
         _ => {
             return Err(anyhow!("unable to parse request uri field"));

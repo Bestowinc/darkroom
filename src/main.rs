@@ -28,10 +28,12 @@ fn main() -> Result<(), Error> {
         }
         SubCommand::Record(cmd) => {
             cmd.validate()?;
-            match run_record(cmd, base_params) {
+            match run_record(cmd, base_params.clone()) {
                 Err(e) => {
-                    write!(io::stderr(), "[{}] ", chrono::Utc::now())
-                        .expect("write to stderr panic");
+                    if base_params.use_timestamp {
+                        write!(io::stderr(), "[{}] ", chrono::Utc::now())
+                            .expect("write to stderr panic");
+                    }
                     Err(e)
                 }
                 _ => Ok(()),
