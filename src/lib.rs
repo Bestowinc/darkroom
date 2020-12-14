@@ -34,7 +34,7 @@ impl log::Log for Logger {
     fn flush(&self) {}
 }
 
-/// Top-level command.
+/// Darkroom: A contract testing tool built in Rust using the filmReel format.
 #[derive(FromArgs, PartialEq, Debug)]
 pub struct Command {
     /// enable verbose output
@@ -175,13 +175,16 @@ pub struct Record {
     #[argh(option, short = 'r')]
     range: Option<String>,
 
-    /// HTTP/S client request timeout in seconds, --timeout 0 disables request timeout [default: 30]
+    /// client request timeout in seconds, --timeout 0 disables request timeout [default: 30]
     #[argh(option, short = 't', default = "30")]
     timeout: u64,
 
     /// return timestamp at execution start, error return, and reel completion
     #[argh(switch, short = 's')]
     timestamp: bool,
+    // forces shape mismatches to be diffed rather than return expected/actual statements
+    // #[argh(switch)]
+    // force_diff: bool,
 }
 
 impl Take {

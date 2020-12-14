@@ -193,8 +193,8 @@ pub fn run_take(
                 "attempt [{}/{}] | interval [{}{}]",
                 n.to_string().yellow(),
                 attempts.times,
-                attempts.ms,
-                "ms".yellow(),
+                attempts.ms.to_string().yellow(),
+                "ms",
             );
             if let Ok(response) = run_request(&params, frame) {
                 if process_response(params.clone(), frame, register, response, output.clone())
