@@ -159,7 +159,7 @@ dark --cut-out >(jq .IP) take ./test_data/post.01s.body.fr.json --cut ./test_dat
 * 30 sec default timeout can now be overridden: `dark record record ./test_data post --timeout 2`
 
 <!--
-VERSION="0.5.0-a"
+VERSION="0.5.0"
 DR_DIR=$PWD
 GRPCURL_DIR=${GRPCURL_DIR:-../grpcurl}
 cargo build --release && \
