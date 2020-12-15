@@ -456,9 +456,10 @@ mod tests {
                 reads: from![],
                 writes: to! ({
                     "USER_ID"=> "'response'.'body'.'id'",
-                    "CREATED"=> "'response'.'body'.'created'"
+                    "CREATED"=> "'response'.'body'.'created'",
+                    "ignore"=> "'response'.'body'.'array'.[0].'ignore'"
                 }),
-                hydrate_writes: false,
+                hydrate_writes: true,
             },
             request: Request {
                 ..Default::default()
@@ -466,7 +467,8 @@ mod tests {
             response: Response {
                 body: Some(json!({
                     "id": "${USER_ID}",
-                    "created": "${CREATED}"
+                    "created": "${CREATED}",
+                    "array": [{"ignore":"${ignore}"}]
                 })),
                 etc: json!({}),
                 status: 0,
@@ -476,7 +478,8 @@ mod tests {
         let payload_response = Response {
             body: Some(json!({
                 "id": "ID_010101",
-                "created": 101010
+                "created": 101010,
+                "array": [{"ignore": "value"}]
             })),
             etc: json!({}),
             status: 0,
@@ -488,6 +491,7 @@ mod tests {
         let mut expected_match = HashMap::new();
         expected_match.insert("USER_ID", to_value("ID_010101").unwrap());
         expected_match.insert("CREATED", to_value(101010).unwrap());
+        expected_match.insert("ignore", to_value("value").unwrap());
         assert_eq!(expected_match, mat.unwrap());
     }
 

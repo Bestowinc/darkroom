@@ -1,6 +1,7 @@
 use crate::error::FrError;
 use glob::glob;
 use std::{
+    collections::HashMap,
     convert::TryFrom,
     ffi::OsStr,
     iter::FromIterator,
@@ -18,6 +19,8 @@ pub struct Reel {
     frames: Vec<MetaFrame>,
 }
 
+const SEQUENCE_DUPE_ERR: &str = "Associated frames cannot share the same sequence number";
+
 impl Reel {
     /// A new reel is created from a provided Path or PathBuf
     pub fn new<P>(dir: P, reel_name: &str, range: Option<Range<u32>>) -> Result<Self, FrError>
@@ -31,10 +34,12 @@ impl Reel {
         // sort by string value since sorting by f32 is not idiomatic
         frames.sort_by(|a, b| a.path.cmp(&b.path));
 
-        Ok(Self {
+        let reel = Self {
             dir: PathBuf::from(dir.as_ref().to_str().expect("None Reel dir")),
             frames,
-        })
+        };
+        reel.validate()?;
+        Ok(reel)
     }
 
     /// convenience function to get default associated cut file
@@ -49,6 +54,25 @@ impl Reel {
             dir: self.dir,
             frames: self.frames.into_iter().filter(|x| x.is_success()).collect(),
         }
+    }
+
+    /// Ensure that the Reel is valid
+    pub fn validate(&self) -> Result<(), FrError> {
+        let mut sequence_set = HashMap::new();
+        // ensure that the Reel sequence is valid
+        for frame in self.frames.iter() {
+            if let Some(old_path) = sequence_set.insert(&frame.sequence_number, &frame.path) {
+                return Err(FrError::ReelParsef(
+                    SEQUENCE_DUPE_ERR,
+                    format!(
+                        "{} and {}",
+                        old_path.file_name().unwrap().to_string_lossy(),
+                        frame.path.file_name().unwrap().to_string_lossy(),
+                    ),
+                ));
+            }
+        }
+        Ok(())
     }
 
     // get_frame_dir_glob returns a glob pattern corresponding to all the Frame JSON files contained in
@@ -74,6 +98,8 @@ impl Reel {
     where
         T: AsRef<OsStr>,
     {
+        // Associate the range with permitted whole sequence values
+        // if a Option::None range was passed, all frames are permitted
         let permit_frame: Box<dyn Fn(u32) -> bool> = match range {
             Some(r) => Box::new(move |n| r.contains(&n)),
             None => Box::new(|_| true),
@@ -125,6 +151,7 @@ pub struct MetaFrame {
     pub name: String,
     pub reel_name: String,
     pub step: f32,
+    sequence_number: String,
     pub frame_type: FrameType,
 }
 
@@ -143,20 +170,23 @@ impl TryFrom<PathBuf> for MetaFrame {
         };
 
         let reel_name = String::from(reel_parts.remove(0));
-        let (seq, fr_type) = parse_sequence(reel_parts.remove(0))?;
+        let sequence_number = reel_parts.remove(0);
+        let (seq, fr_type) = parse_sequence(sequence_number)?;
         let name = reel_parts.remove(0);
 
         // only three indices should be present when split on '.'
-        assert!(
-            reel_parts.is_empty(),
-            "frame name should only have 3 period delimited sections ending with '.fr.json'"
-        );
+        if !reel_parts.is_empty() {
+            return Err(FrError::ReelParse(
+                "frame name should only have 3 period delimited sections ending with '.fr.json'",
+            ));
+        }
 
         Ok(Self {
             path: p.clone(),
             name: name.to_string(),
             reel_name,
             step: seq,
+            sequence_number: sequence_number.to_string(),
             frame_type: fr_type,
         })
     }
@@ -248,7 +278,8 @@ mod tests {
     #[rstest(input, expected,
         case("02se", (2.0, FrameType::PsError)),
         case("10s_1", (10.1, FrameType::Success)),
-        case("011e_8", (11.8, FrameType::Error))
+        case("011e_8", (11.8, FrameType::Error)),
+        case("01e", (1.0, FrameType::Error)),
         )]
     fn test_parse_sequence(input: &str, expected: (f32, FrameType)) {
         match parse_sequence(input) {
@@ -267,9 +298,39 @@ mod tests {
                 name: "frame_name".to_string(),
                 path: PathBuf::from("./reel_name.01s.frame_name.fr.json"),
                 reel_name: "reel_name".to_string(),
+                sequence_number: "01s".to_string(),
                 step: 1.0,
             },
             try_path
+        );
+    }
+
+    #[test]
+    fn test_validate() {
+        let reel = Reel {
+            dir: ".".into(),
+            frames: vec![
+                MetaFrame::try_from(PathBuf::from("./reel.01s.frame1.fr.json")).unwrap(),
+                MetaFrame::try_from(PathBuf::from("./reel.01e.frame2.fr.json")).unwrap(),
+            ],
+        };
+        assert!(reel.validate().is_ok());
+    }
+    #[test]
+    fn test_validate_err() {
+        let reel = Reel {
+            dir: ".".into(),
+            frames: vec![
+                MetaFrame::try_from(PathBuf::from("./reel.01s.frame1.fr.json")).unwrap(),
+                MetaFrame::try_from(PathBuf::from("./reel.01s.frame2.fr.json")).unwrap(),
+            ],
+        };
+        assert_eq!(
+            reel.validate().unwrap_err(),
+            FrError::ReelParsef(
+                SEQUENCE_DUPE_ERR,
+                "reel.01s.frame1.fr.json and reel.01s.frame2.fr.json".to_string()
+            )
         );
     }
 }
