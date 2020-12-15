@@ -20,6 +20,12 @@ pub struct Frame<'a> {
     pub response: Response,
 }
 
+const MISSING_VAR_ERR: &str = "Variable is not present in InstructionSet";
+const INVALID_INSTRUCTION_TYPE_ERR: &str =
+    "Frame write instruction did not correspond to a string object";
+const DUPE_VAR_REFERENCE_ERR: &str =
+    "Cut Variables cannot be referenced by both read and write instructions";
+
 impl<'a> Frame<'a> {
     /// Creates a new Frame object running post deserialization validations
     pub fn new(json_string: &str) -> Result<Frame, FrError> {
@@ -115,10 +121,7 @@ impl<'a> Frame<'a> {
             for mat in matches.into_iter() {
                 if let Some(n) = mat.name() {
                     if !set.contains(n) {
-                        return Err(FrError::FrameParsef(
-                            "Variable is not present in InstructionSet",
-                            n.to_string(),
-                        ));
+                        return Err(FrError::FrameParsef(MISSING_VAR_ERR, n.to_string()));
                     }
                     // Now that the cut var is confirmed to exist in the entire instruction set
                     // perform read operation ony if cut var is present in read instructions
@@ -189,7 +192,7 @@ impl<'a> InstructionSet<'a> {
 
         if intersection.is_some() {
             return Err(FrError::FrameParsef(
-                "Cut Variables cannot be referenced by both read and write instructions",
+                DUPE_VAR_REFERENCE_ERR,
                 format!("{:?}", intersection),
             ));
         }
@@ -281,7 +284,7 @@ impl Response {
             let frame_str = match get_jql_value(&frame_response, query) {
                 Ok(Value::String(v)) => Ok(v),
                 Ok(_) => Err(FrError::FrameParsef(
-                    "frame write instruction did not correspond to a string object:",
+                    INVALID_INSTRUCTION_TYPE_ERR,
                     query.to_string(),
                 )),
                 Err(e) => Err(e),

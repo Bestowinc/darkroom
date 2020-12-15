@@ -59,7 +59,7 @@ impl Reel {
     /// Ensure that the Reel is valid
     pub fn validate(&self) -> Result<(), FrError> {
         let mut sequence_set = HashMap::new();
-        // ensure that the Reel sequence is valid
+        // ensure that the Reel has no duplicate sequence number
         for frame in self.frames.iter() {
             if let Some(old_path) = sequence_set.insert(&frame.sequence_number, &frame.path) {
                 return Err(FrError::ReelParsef(
