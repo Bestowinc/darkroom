@@ -63,14 +63,10 @@ impl Reel {
         let mut sequence_set = HashMap::new();
         // ensure that the Reel has no duplicate sequence number
         for frame in self.frames.iter() {
-            if let Some(old_path) = sequence_set.insert(&frame.sequence_number, &frame.path) {
+            if let Some(dupe_ref) = sequence_set.insert(&frame.step, frame.get_filename()) {
                 return Err(FrError::ReelParsef(
                     SEQUENCE_DUPE_ERR,
-                    format!(
-                        "{} and {}",
-                        old_path.file_name().unwrap().to_string_lossy(),
-                        frame.path.file_name().unwrap().to_string_lossy(),
-                    ),
+                    format!("{} and {}", dupe_ref, frame.get_filename()),
                 ));
             }
         }
@@ -101,7 +97,7 @@ impl Reel {
         T: AsRef<OsStr>,
     {
         // Associate the range with permitted whole sequence values
-        // if a Option::None range was passed, all frames are permitted
+        // if an Option::None range was passed, all frames are permitted
         let permit_frame: Box<dyn Fn(u32) -> bool> = match range {
             Some(r) => Box::new(move |n| r.contains(&n)),
             None => Box::new(|_| true),
@@ -115,7 +111,7 @@ impl Reel {
             .filter(|path| path.is_file())
         {
             let frame = MetaFrame::try_from(entry)?;
-            if permit_frame(frame.step as u32) {
+            if permit_frame(frame.step_f3.trunc() as u32) {
                 frames.push(frame);
             }
         }
@@ -149,12 +145,12 @@ impl IntoIterator for Reel {
 ///
 #[derive(Clone, PartialEq, Debug)]
 pub struct MetaFrame {
-    pub path: PathBuf,
-    pub name: String,
     pub reel_name: String,
-    pub step: f32,
-    sequence_number: String,
     pub frame_type: FrameType,
+    pub name: String,
+    pub path: PathBuf,
+    pub step_f3: f32,
+    step: String,
 }
 
 impl TryFrom<PathBuf> for MetaFrame {
@@ -185,8 +181,8 @@ impl TryFrom<PathBuf> for MetaFrame {
             path: p.clone(),
             name: name.to_string(),
             reel_name,
-            step: seq,
-            sequence_number: sequence_number.to_string(),
+            step_f3: seq,
+            step: sequence_number.to_string(),
             frame_type: fr_type,
         })
     }
@@ -198,10 +194,8 @@ impl MetaFrame {
     }
 
     // get_filename returns the str representation of the MetaFrame.path file stem
-    pub fn get_filename(&self) -> Option<String> {
-        self.path
-            .file_stem()
-            .map(|x| String::from(x.to_string_lossy()))
+    pub fn get_filename(&self) -> String {
+        return format!("{}.{}.{}.fr.json", self.reel_name, self.step, self.name);
     }
 }
 
@@ -298,8 +292,8 @@ mod tests {
                 name: "frame_name".to_string(),
                 path: PathBuf::from("./reel_name.01s.frame_name.fr.json"),
                 reel_name: "reel_name".to_string(),
-                sequence_number: "01s".to_string(),
-                step: 1.0,
+                step: "01s".to_string(),
+                step_f3: 1.0,
             },
             try_path
         );

@@ -227,11 +227,7 @@ pub fn single_take(cmd: Take, base_params: BaseParams) -> Result<(), Error> {
     let get_metaframe = || MetaFrame::try_from(cmd.frame.clone());
 
     // Frame to be mutably borrowed
-    let frame = Frame::new(&frame_str).context(
-        get_metaframe()?
-            .get_filename()
-            .expect("MetaFrame.get_filename() panic"),
-    )?;
+    let frame = Frame::new(&frame_str).context(get_metaframe()?.get_filename())?;
     let mut payload_frame = frame.clone();
     let mut cut_register = Register::from(&cut_str)?;
     if let Err(e) = run_take(
