@@ -49,9 +49,7 @@ pub fn run_record(cmd: Record, mut base_params: BaseParams) -> Result<(), Error>
             "{}{} {:?}",
             base_params.fmt_timestamp(),
             "File:".yellow(),
-            meta_frame
-                .get_filename()
-                .context("unable to unwrap MetaFrame.path")?
+            meta_frame.get_filename()
         );
         warn!("{}", "=======================".green());
 

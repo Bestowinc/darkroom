@@ -157,6 +157,7 @@ dark --cut-out >(jq .IP) take ./test_data/post.01s.body.fr.json --cut ./test_dat
 
 * timestamps are added to recordings: `dark record record ./test_data post --timestamp`
 * 30 sec default timeout can now be overridden: `dark record record ./test_data post --timeout 2`
+* reel sequence numbers are now checked for duplicates
 
 <!--
 VERSION="0.5.0"
