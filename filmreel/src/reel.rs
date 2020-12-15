@@ -20,6 +20,8 @@ pub struct Reel {
 }
 
 const SEQUENCE_DUPE_ERR: &str = "Associated frames cannot share the same sequence number";
+const METAFRAME_DELIMIT_ERR: &str =
+    "Frame filename mast have exactly 3 period delimited sections preceding '.fr.json'";
 
 impl Reel {
     /// A new reel is created from a provided Path or PathBuf
@@ -176,9 +178,7 @@ impl TryFrom<PathBuf> for MetaFrame {
 
         // only three indices should be present when split on '.'
         if !reel_parts.is_empty() {
-            return Err(FrError::ReelParse(
-                "frame name should only have 3 period delimited sections ending with '.fr.json'",
-            ));
+            return Err(FrError::ReelParse(METAFRAME_DELIMIT_ERR));
         }
 
         Ok(Self {
