@@ -20,7 +20,7 @@ A contract testing tool built in Rust using the [filmReel format](https://github
 ```
 Usage: dark [<address>] [-v] [--tls] [-p <proto>] [-H <header>] [-C <cut-out>] [-i] <command> [<args>]
 
-Top-level command.
+Darkroom: A contract testing tool built in Rust using the filmReel format.
 
 Options:
   -v, --verbose     enable verbose output
@@ -73,9 +73,9 @@ Options:
   -o, --take-out    output directory for successful takes
   -r, --range       the range (inclusive) of frames that a record session will
                     use, colon separated: --range <start>:<end> --range <start>:
-  -t, --timeout     HTTP/S client request timeout in seconds, --timeout 0
-                    disables request timeout [default: 30]
-  -s, --timestamp   return timestamp at execution start, error return, and reel
+  -t, --timeout     client request timeout in seconds, --timeout 0 disables
+                    request timeout [default: 30]
+  -s, --timestamp   print timestamp at take start, error return, and reel
                     completion
   --help            display usage information
 
