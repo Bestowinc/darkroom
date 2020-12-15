@@ -111,7 +111,7 @@ impl Reel {
             .filter(|path| path.is_file())
         {
             let frame = MetaFrame::try_from(entry)?;
-            if permit_frame(frame.step_f3.trunc() as u32) {
+            if permit_frame(frame.step_f32.trunc() as u32) {
                 frames.push(frame);
             }
         }
@@ -149,7 +149,7 @@ pub struct MetaFrame {
     pub frame_type: FrameType,
     pub name: String,
     pub path: PathBuf,
-    pub step_f3: f32,
+    pub step_f32: f32,
     step: String,
 }
 
@@ -181,7 +181,7 @@ impl TryFrom<PathBuf> for MetaFrame {
             path: p.clone(),
             name: name.to_string(),
             reel_name,
-            step_f3: seq,
+            step_f32: seq,
             step: sequence_number.to_string(),
             frame_type: fr_type,
         })
@@ -293,7 +293,7 @@ mod tests {
                 path: PathBuf::from("./reel_name.01s.frame_name.fr.json"),
                 reel_name: "reel_name".to_string(),
                 step: "01s".to_string(),
-                step_f3: 1.0,
+                step_f32: 1.0,
             },
             try_path
         );
