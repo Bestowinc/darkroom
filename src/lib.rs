@@ -179,7 +179,7 @@ pub struct Record {
     #[argh(option, short = 't', default = "30")]
     timeout: u64,
 
-    /// return timestamp at execution start, error return, and reel completion
+    /// print timestamp at take start, error return, and reel completion
     #[argh(switch, short = 's')]
     timestamp: bool,
     // forces shape mismatches to be diffed rather than return expected/actual statements

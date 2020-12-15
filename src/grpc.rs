@@ -64,13 +64,12 @@ pub fn request(prm: Params, req: Request) -> Result<Response, Error> {
         },
         Some(_) => {
             let err: ResponseError = serde_json::from_slice(&req_cmd.stderr).map_err(|_| {
-                // if we fail to map to a serde struct, stringingfy stderr bytes and cast
-                // to anyhow error
+                // if we fail to map to a serde struct, stringingfy stderr bytes and cast to anyhow error
                 String::from_utf8(req_cmd.stderr)
                     .map_err(Error::from)
                     .map(|v| anyhow!(v))
                     .context("grpcurl error")
-                    .unwrap_err()
+                    .unwrap_or_else(|e| e)
             })?;
             // create frame response from deserialized grpcurl error
             Response {
