@@ -25,8 +25,17 @@ pub fn request(prm: Params, req: Request) -> Result<Response, Error> {
     let mut flags: Vec<&OsStr> = vec![OsStr::new("-format-error")];
 
     if !prm.tls {
-        flags.push(OsStr::new("-plaintext"));
+        flags.push("-plaintext".as_ref());
     }
+
+    // prepend "-proto" to every protos PathBuf provided
+    if let Some(import_path) = prm.import_path {
+        flags.extend(iter_path_args(
+            OsStr::new("-import-path"),
+            import_path.iter().map(|x| x.as_ref()),
+        ));
+    }
+
     // prepend "-proto" to every protos PathBuf provided
     if let Some(protos) = prm.proto {
         flags.extend(iter_path_args(
@@ -34,6 +43,7 @@ pub fn request(prm: Params, req: Request) -> Result<Response, Error> {
             protos.iter().map(|x| x.as_ref()),
         ));
     }
+    dbg!(&flags);
 
     let headers = match prm.header {
         Some(h) => Some(h.replace("\"", "")),

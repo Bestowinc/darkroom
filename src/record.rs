@@ -8,6 +8,7 @@ use std::{
     fs,
     ops::Range,
     path::{Path, PathBuf},
+    time::Instant,
 };
 
 /// run_record runs through a Reel sequence using the darkroom::Record struct
@@ -38,6 +39,11 @@ pub fn run_record(cmd: Record, mut base_params: BaseParams) -> Result<(), Error>
         .map(Register::from)
         .collect();
     cut_register.destructive_merge(merge_cuts?);
+
+    let mut duration = None;
+    if cmd.duration {
+        duration = Some(Instant::now())
+    }
 
     for meta_frame in comp_reels.into_iter().flatten() {
         // if cmd.output is Some, provide a take PathBuf
@@ -70,6 +76,12 @@ pub fn run_record(cmd: Record, mut base_params: BaseParams) -> Result<(), Error>
         "Success 🎉 ".yellow(),
         "==========\n".green()
     );
+    if let Some(now) = duration {
+        warn!(
+            "[Total record duration: {:.3}sec]",
+            now.elapsed().as_secs_f32()
+        );
+    }
 
     write_cut(&base_params.cut_out, &cut_register, &cmd.reel_name, false)?;
 
