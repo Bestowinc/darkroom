@@ -2,7 +2,7 @@ use crate::params::{iter_path_args, Params};
 use anyhow::{anyhow, Context, Error};
 use filmreel::frame::{Request, Response};
 use lazy_static::lazy_static;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_json::json;
 use std::{ffi::OsStr, path::PathBuf, process::Command};
 
@@ -93,7 +93,7 @@ pub fn request(prm: Params, req: Request) -> Result<Response, Error> {
     Ok(response)
 }
 
-#[derive(Debug, Deserialize, Serialize, PartialEq)]
+#[derive(Debug, Deserialize, PartialEq)]
 struct ResponseError {
     code: u32,
     message: String,

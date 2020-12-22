@@ -190,7 +190,7 @@ mod tests {
             tls: false,
             address: Some("www.initial_addr.com".to_string()),
             header: Some("initial_header".to_string()),
-            import_path: None,
+            import_path: vec![],
             proto: vec![],
             verbose: false,
             cut_out: None,
