@@ -46,7 +46,7 @@ pub struct Command {
     tls: bool,
 
     /// the path to a directory from which proto sources can be imported, for use with --proto flags.
-    #[argh(option)]
+    #[argh(option, short = 'm')]
     import_path: Vec<PathBuf>,
 
     /// pass proto files used for payload forming
