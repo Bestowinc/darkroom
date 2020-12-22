@@ -22,17 +22,17 @@ pub fn validate_grpcurl() -> Result<(), Error> {
 pub fn request(prm: Params, req: Request) -> Result<Response, Error> {
     validate_grpcurl().context("grpcurl request failure")?;
 
-    let mut flags: Vec<&OsStr> = vec!["-format-error".as_ref()];
+    let mut flags: Vec<&OsStr> = vec![OsStr::new("-format-error")];
 
     if !prm.tls {
-        flags.push("-plaintext".as_ref());
+        flags.push(OsStr::new("-plaintext"));
     }
 
-    // prepend "-proto" to every protos PathBuf provided
-    if let Some(import_path) = prm.import_path {
+    // prepend "-import-path" to every protos PathBuf provided
+    if let Some(proto_path) = prm.proto_path {
         flags.extend(iter_path_args(
             OsStr::new("-import-path"),
-            import_path.iter().map(|x| x.as_ref()),
+            proto_path.iter().map(OsStr::new),
         ));
     }
 
@@ -40,19 +40,18 @@ pub fn request(prm: Params, req: Request) -> Result<Response, Error> {
     if let Some(protos) = prm.proto {
         flags.extend(iter_path_args(
             OsStr::new("-proto"),
-            protos.iter().map(|x| x.as_ref()),
+            protos.iter().map(OsStr::new),
         ));
     }
-    dbg!(&flags);
 
     let headers = match prm.header {
         Some(h) => Some(h.replace("\"", "")),
         None => None,
     };
 
-    if let Some(h) = headers.as_ref() {
-        flags.push("-H".as_ref());
-        flags.push(h.as_ref());
+    if let Some(h) = &headers {
+        flags.push(OsStr::new("-H"));
+        flags.push(OsStr::new(h));
     }
 
     let req_cmd = Command::new("grpcurl")

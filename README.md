@@ -18,14 +18,14 @@ A contract testing tool built in Rust using the [filmReel format](https://github
 
 <!-- dark start -->
 ```
-Usage: dark [<address>] [-v] [--tls] [-m <import-path>] [-p <proto>] [-H <header>] [-C <cut-out>] [-i] <command> [<args>]
+Usage: dark [<address>] [-v] [--tls] [--proto-path <proto-path>] [-p <proto>] [-H <header>] [-C <cut-out>] [-i] <command> [<args>]
 
 Darkroom: A contract testing tool built in Rust using the filmReel format.
 
 Options:
   -v, --verbose     enable verbose output
   --tls             enable TLS (automatically inferred for HTTP/S)
-  -m, --import-path the path to a directory from which proto sources can be
+  --proto-path      the path to a directory from which proto sources can be
                     imported, for use with --proto flags.
   -p, --proto       pass proto files used for payload forming
   -H, --header      fallback header passed to the specified protocol

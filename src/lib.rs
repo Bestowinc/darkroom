@@ -46,8 +46,8 @@ pub struct Command {
     tls: bool,
 
     /// the path to a directory from which proto sources can be imported, for use with --proto flags.
-    #[argh(option, short = 'm')]
-    import_path: Vec<PathBuf>,
+    #[argh(option)]
+    proto_path: Vec<PathBuf>,
 
     /// pass proto files used for payload forming
     #[argh(option, short = 'p')]
@@ -81,7 +81,7 @@ impl Command {
             tls: self.tls,
             header: self.header.clone(),
             address: self.address.clone(),
-            import_path: self.import_path.clone(),
+            proto_path: self.proto_path.clone(),
             proto: self.proto.clone(),
             cut_out: self.cut_out.clone(),
             interactive: self.interactive,
