@@ -195,11 +195,11 @@ where
         [start, end] => {
             let start_parse = || start.parse::<u32>().context("start range parse error");
             let end_parse = || end.parse::<u32>().context("end range parse error");
-            if *start == "" {
+            if start.is_empty() {
                 // make end string range inclusive
                 return Ok(Some(0..end_parse()? + 1));
             }
-            if *end == "" {
+            if end.is_empty() {
                 return Ok(Some(start_parse()?..u32::MAX));
             }
             Ok(Some(start_parse()?..end_parse()? + 1))
