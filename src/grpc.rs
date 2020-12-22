@@ -22,7 +22,7 @@ pub fn validate_grpcurl() -> Result<(), Error> {
 pub fn request(prm: Params, req: Request) -> Result<Response, Error> {
     validate_grpcurl().context("grpcurl request failure")?;
 
-    let mut flags: Vec<&OsStr> = vec![OsStr::new("-format-error")];
+    let mut flags: Vec<&OsStr> = vec!["-format-error".as_ref()];
 
     if !prm.tls {
         flags.push("-plaintext".as_ref());
@@ -51,7 +51,7 @@ pub fn request(prm: Params, req: Request) -> Result<Response, Error> {
     };
 
     if let Some(h) = headers.as_ref() {
-        flags.push(OsStr::new("-H"));
+        flags.push("-H".as_ref());
         flags.push(h.as_ref());
     }
 
