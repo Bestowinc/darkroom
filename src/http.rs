@@ -1,6 +1,6 @@
 use crate::params::Params;
 use anyhow::{anyhow, Context, Error};
-use filmreel::frame::{Request, Response};
+use filmreel::{frame::Request, response::Response};
 use http::header::HeaderMap;
 use log::warn;
 use reqwest::{blocking::*, Method};
@@ -45,26 +45,22 @@ such as 'data:' mailto: URLs, and localhost without a leading http:// or https:/
         .timeout(timeout)
         .build()?
         .request(method, endpoint);
-    match req.to_val_payload() {
-        Ok(b) => {
-            // TODO handle empty body better
-            if b != json!({}) {
-                builder = builder.body(b.to_string());
-            }
+    if let Some(b) = req.to_val_payload()? {
+        builder = builder.body(b.to_string());
+    }
+
+    if let Some(etc) = req.get_etc() {
+        match etc.get("form") {
+            Some(Value::Object(f)) => builder = builder.form(&f),
+            Some(Value::Null) | None => (),
+            _ => return Err(anyhow!("request[\"form\"] must be a key value map")),
         }
-        Err(e) => return Err(Error::from(e)),
-    }
 
-    match req.get_etc().get("form") {
-        Some(Value::Object(f)) => builder = builder.form(&f),
-        Some(Value::Null) | None => {}
-        _ => return Err(anyhow!("request[\"form\"] must be a key value map")),
-    }
-
-    match req.get_etc().get("query") {
-        Some(Value::Object(f)) => builder = builder.query(&f),
-        Some(Value::Null) | None => {}
-        _ => return Err(anyhow!("request[\"query\"] must be a key value map")),
+        match etc.get("query") {
+            Some(Value::Object(f)) => builder = builder.query(&f),
+            Some(Value::Null) | None => (),
+            _ => return Err(anyhow!("request[\"query\"] must be a key value map")),
+        }
     }
 
     if let Some(h) = prm.header {
@@ -103,7 +99,8 @@ pub fn request(prm: Params, req: Request) -> Result<Response, Error> {
     Ok(Response {
         // TODO add response headers
         body: response_body,
-        etc: json!({}),
+        etc: Some(json!({})),
+        validator: None,
         status,
     })
 }

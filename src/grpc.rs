@@ -1,6 +1,6 @@
 use crate::params::{iter_path_args, Params};
 use anyhow::{anyhow, Context, Error};
-use filmreel::frame::{Request, Response};
+use filmreel::{frame::Request, response::Response};
 use lazy_static::lazy_static;
 use serde::Deserialize;
 use serde_json::json;
@@ -67,9 +67,10 @@ pub fn request(prm: Params, req: Request) -> Result<Response, Error> {
 
     let response = match req_cmd.status.code() {
         Some(0) => Response {
-            body:   serde_json::from_slice(&req_cmd.stdout)?,
-            status: 0,
-            etc:    json!({}),
+            body:      serde_json::from_slice(&req_cmd.stdout)?,
+            status:    0,
+            etc:       Some(json!({})),
+            validator: None,
         },
         Some(_) => {
             let err: ResponseError = serde_json::from_slice(&req_cmd.stderr).map_err(|_| {
@@ -82,9 +83,10 @@ pub fn request(prm: Params, req: Request) -> Result<Response, Error> {
             })?;
             // create frame response from deserialized grpcurl error
             Response {
-                body:   Some(serde_json::Value::String(err.message)),
-                status: err.code,
-                etc:    json!({}),
+                body:      Some(serde_json::Value::String(err.message)),
+                status:    err.code,
+                etc:       Some(json!({})),
+                validator: None,
             }
         }
         None => return Err(anyhow!("grpcurl response code was <None>")),

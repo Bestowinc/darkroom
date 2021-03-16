@@ -102,10 +102,14 @@ impl BaseParams {
                 .ok_or_else(|| anyhow!("Params: missing address"))?,
         };
 
-        let attempts: Option<Attempts> = match request.get_etc().get("attempts") {
-            Some(v) => serde_json::from_value(v.clone())?,
+        let attempts: Option<Attempts> = match request.get_etc() {
+            Some(e) => match e.get("attempts") {
+                Some(v) => serde_json::from_value(v.clone())?,
+                None => None,
+            },
             None => None,
         };
+
         let proto_path = match self.proto_path.len() {
             0 => None,
             _ => Some(&self.proto_path),
