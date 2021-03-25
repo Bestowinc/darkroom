@@ -25,7 +25,7 @@ use std::{
 };
 
 // run_request decides which protocol to use for sending a hydrated Frame Request
-pub fn run_request<'a>(params: Params<'a>, frame: Frame) -> Result<Response<'a>, Error> {
+pub fn run_request<'a>(params: &'a Params, frame: Frame) -> Result<Response<'a>, Error> {
     let request_fn = match frame.protocol {
         Protocol::HTTP => http::request,
         Protocol::GRPC => grpc::request,
@@ -199,7 +199,7 @@ pub fn run_take(
                 attempts.ms.to_string().yellow(),
                 "ms",
             );
-            if let Ok(response) = run_request(params.clone(), frame.clone()) {
+            if let Ok(response) = run_request(&params, frame.clone()) {
                 if process_response(&params, frame, register, response, output.clone()).is_ok() {
                     return Ok(());
                 }
@@ -214,7 +214,7 @@ pub fn run_take(
         );
     }
 
-    let response = run_request(params.clone(), frame.clone())?;
+    let response = run_request(&params, frame.clone())?;
     match process_response(&params, frame, register, response, output) {
         Ok(_) => Ok(()),
         Err(e) => Err(e),
@@ -325,7 +325,7 @@ mod tests {
         let mut register = Register::default();
         let params = Params::default();
         let processed_register =
-            process_response(params, &mut frame, &mut register, payload_response, None).unwrap();
+            process_response(&params, &mut frame, &mut register, payload_response, None).unwrap();
         assert_eq!(*processed_register, register!({"USER_ID"=>"BIG_BEN"}));
     }
 }

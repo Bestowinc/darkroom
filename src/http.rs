@@ -9,7 +9,7 @@ use std::{collections::HashMap, convert::TryFrom, time::Duration};
 use url::Url;
 
 /// build_request parses a Frame Request and a Params object to send a HTTP payload using reqwest
-pub fn build_request(prm: Params, req: Request) -> Result<RequestBuilder, Error> {
+pub fn build_request(prm: &Params, req: Request) -> Result<RequestBuilder, Error> {
     let method: Method;
     let endpoint: Url;
 
@@ -26,8 +26,8 @@ pub fn build_request(prm: Params, req: Request) -> Result<RequestBuilder, Error>
     {
         [method_str, tail_str] => {
             method = Method::from_bytes(method_str.as_bytes())?;
-            let entrypoint = prm.address;
-            endpoint = Url::parse(&entrypoint)
+            let entrypoint = &prm.address;
+            endpoint = Url::parse(entrypoint)
                 .context(format!("base url: {}", entrypoint))?
                 .join(tail_str)
                 .context(format!(
@@ -63,7 +63,7 @@ such as 'data:' mailto: URLs, and localhost without a leading http:// or https:/
         }
     }
 
-    if let Some(h) = prm.header {
+    if let Some(h) = &prm.header {
         builder = builder.headers(build_header(&h)?);
     }
     Ok(builder)
@@ -80,7 +80,7 @@ fn build_header(header: &str) -> Result<HeaderMap, Error> {
 
 // request is used by run_request to send an http request and deserialize the returned data
 // into a Response struct
-pub fn request(prm: Params, req: Request) -> Result<Response, Error> {
+pub fn request<'a>(prm: &'a Params, req: Request) -> Result<Response<'a>, Error> {
     let response = build_request(prm, req)?.send()?;
     let status = response.status().as_u16() as u32;
     // reqwest.Response is a private Option<Value> field so we rely on
