@@ -1,6 +1,6 @@
 [package]
 name = "filmreel"
-version = "0.5.0"
+version = "0.4.0"
 description = "filmReel parser for Rust"
 authors = ["Mikhail Katychev <mkatych@gmail.com>"]
 edition = "2018"
@@ -18,14 +18,11 @@ path = "src/lib.rs"
 [dependencies]
 colored = "2.0"
 glob  = "0.3"
-indexmap = "1.6.2"
 jql = "2.8"
 lazy_static = "1.4.0"
-pretty_assertions = "0.7.1"
 regex = "1.4"
 serde = { version = "1.0.118", features = ["derive"] }
 serde_json = "1.0"
 
 [dev-dependencies]
 rstest = "0.6"
-paste = "1.0"
