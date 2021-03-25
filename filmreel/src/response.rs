@@ -6,7 +6,7 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, to_value, Value};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 const INVALID_INSTRUCTION_TYPE_ERR: &str =
     "Frame write instruction did not correspond to a string object";
@@ -96,7 +96,7 @@ impl<'a> PartialEq for Response<'a> {
 
 impl<'a> Eq for Response<'a> {}
 
-type Validator<'a> = HashMap<&'a str, Validation>;
+type Validator<'a> = BTreeMap<&'a str, Validation>;
 
 #[derive(Serialize, Clone, Deserialize, Default, Debug, PartialEq)]
 #[serde(default)]

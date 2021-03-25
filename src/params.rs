@@ -49,16 +49,16 @@ pub fn warn_timestamp(timestamp: bool) {
 /// before the given values are checked for in the Frame
 #[derive(Clone)]
 pub struct BaseParams {
-    pub timeout:       u64,
-    pub use_timestamp: bool,
-    pub tls:           bool,
-    pub header:        Option<String>,
-    pub address:       Option<String>,
-    pub proto_path:    Vec<PathBuf>,
-    pub proto:         Vec<PathBuf>,
-    pub cut_out:       Option<PathBuf>,
-    pub interactive:   bool,
-    pub verbose:       bool,
+    pub timeout:     u64,
+    pub timestamp:   bool,
+    pub tls:         bool,
+    pub header:      Option<String>,
+    pub address:     Option<String>,
+    pub proto_path:  Vec<PathBuf>,
+    pub proto:       Vec<PathBuf>,
+    pub cut_out:     Option<PathBuf>,
+    pub interactive: bool,
+    pub verbose:     bool,
 }
 
 #[derive(Clone, Copy, Deserialize, Default, Debug, PartialEq)]
@@ -70,16 +70,16 @@ pub struct Attempts {
 impl From<&Command> for BaseParams {
     fn from(cmd: &Command) -> Self {
         Self {
-            timeout:       30,
-            use_timestamp: false,
-            tls:           cmd.tls,
-            header:        cmd.header.clone(),
-            address:       cmd.address.clone(),
-            proto_path:    cmd.proto.clone(),
-            proto:         cmd.proto.clone(),
-            cut_out:       cmd.cut_out.clone(),
-            interactive:   cmd.interactive,
-            verbose:       cmd.verbose,
+            timeout:     30,
+            timestamp:   false,
+            tls:         cmd.tls,
+            header:      cmd.header.clone(),
+            address:     cmd.address.clone(),
+            proto_path:  cmd.proto.clone(),
+            proto:       cmd.proto.clone(),
+            cut_out:     cmd.cut_out.clone(),
+            interactive: cmd.interactive,
+            verbose:     cmd.verbose,
         }
     }
 }
@@ -121,7 +121,7 @@ impl BaseParams {
 
         Ok(Params {
             timeout: self.timeout,
-            use_timestamp: self.use_timestamp,
+            use_timestamp: self.timestamp,
             tls: self.tls,
             header,
             address,
@@ -130,42 +130,14 @@ impl BaseParams {
             attempts,
         })
     }
-    pub fn with_timeout(self, timeout: u64) -> Self {
-        BaseParams {
-            timeout,
-            use_timestamp: self.use_timestamp,
-            tls: self.tls,
-            header: self.header.clone(),
-            address: self.address.clone(),
-            proto_path: self.proto_path.clone(),
-            proto: self.proto.clone(),
-            cut_out: self.cut_out.clone(),
-            interactive: self.interactive,
-            verbose: self.verbose,
-        }
-    }
-    pub fn with_timestamp(self, timestamp: bool) -> Self {
-        BaseParams {
-            timeout:       self.timeout,
-            use_timestamp: timestamp,
-            tls:           self.tls,
-            header:        self.header.clone(),
-            address:       self.address.clone(),
-            proto_path:    self.proto_path.clone(),
-            proto:         self.proto.clone(),
-            cut_out:       self.cut_out.clone(),
-            interactive:   self.interactive,
-            verbose:       self.verbose,
-        }
-    }
     pub fn fmt_timestamp(&self) -> String {
-        if self.use_timestamp {
+        if self.timestamp {
             return format!("[{}] ", chrono::Utc::now());
         }
         "".to_string()
     }
     pub fn warn_timestamp(&self) {
-        warn_timestamp(self.use_timestamp)
+        warn_timestamp(self.timestamp)
     }
 }
 

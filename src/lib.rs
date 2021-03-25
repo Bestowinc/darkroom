@@ -76,16 +76,16 @@ pub struct Command {
 impl Command {
     pub fn base_params(&self) -> BaseParams {
         BaseParams {
-            timeout:       30,
-            use_timestamp: false,
-            tls:           self.tls,
-            header:        self.header.clone(),
-            address:       self.address.clone(),
-            proto_path:    self.proto_path.clone(),
-            proto:         self.proto.clone(),
-            cut_out:       self.cut_out.clone(),
-            interactive:   self.interactive,
-            verbose:       self.verbose,
+            timeout:     30,
+            timestamp:   false,
+            tls:         self.tls,
+            header:      self.header.clone(),
+            address:     self.address.clone(),
+            proto_path:  self.proto_path.clone(),
+            proto:       self.proto.clone(),
+            cut_out:     self.cut_out.clone(),
+            interactive: self.interactive,
+            verbose:     self.verbose,
         }
     }
 
