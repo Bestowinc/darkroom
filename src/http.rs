@@ -100,7 +100,7 @@ pub fn request<'a>(prm: &'a Params, req: Request) -> Result<Response<'a>, Error>
         // TODO add response headers
         body: response_body,
         etc: Some(json!({})),
-        validator: None,
+        validation: None,
         status,
     })
 }

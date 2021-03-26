@@ -67,10 +67,10 @@ pub fn request<'a>(prm: &'a Params, req: Request) -> Result<Response<'a>, Error>
 
     let response = match req_cmd.status.code() {
         Some(0) => Response {
-            body:      serde_json::from_slice(&req_cmd.stdout)?,
-            status:    0,
-            etc:       Some(json!({})),
-            validator: None,
+            body:       serde_json::from_slice(&req_cmd.stdout)?,
+            status:     0,
+            etc:        Some(json!({})),
+            validation: None,
         },
         Some(_) => {
             let err: ResponseError = serde_json::from_slice(&req_cmd.stderr).map_err(|_| {
@@ -83,10 +83,10 @@ pub fn request<'a>(prm: &'a Params, req: Request) -> Result<Response<'a>, Error>
             })?;
             // create frame response from deserialized grpcurl error
             Response {
-                body:      Some(serde_json::Value::String(err.message)),
-                status:    err.code,
-                etc:       Some(json!({})),
-                validator: None,
+                body:       Some(serde_json::Value::String(err.message)),
+                status:     err.code,
+                etc:        Some(json!({})),
+                validation: None,
             }
         }
         None => return Err(anyhow!("grpcurl response code was <None>")),

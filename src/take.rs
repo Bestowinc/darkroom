@@ -317,10 +317,10 @@ mod tests {
         )
         .unwrap();
         let payload_response = Response {
-            body:      Some(json!("created user: BIG_BEN")),
-            etc:       Some(json!({})),
-            validator: None,
-            status:    200,
+            body:       Some(json!("created user: BIG_BEN")),
+            etc:        Some(json!({})),
+            validation: None,
+            status:     200,
         };
         let mut register = Register::default();
         let params = Params::default();

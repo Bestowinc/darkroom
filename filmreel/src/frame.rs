@@ -148,7 +148,9 @@ impl<'a> Frame<'a> {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub enum Protocol {
     #[serde(rename(serialize = "gRPC", deserialize = "gRPC"))]
+    #[allow(clippy::upper_case_acronyms)]
     GRPC,
+    #[allow(clippy::upper_case_acronyms)]
     HTTP,
 }
 
@@ -224,11 +226,7 @@ impl Request {
     }
 
     pub fn to_val_payload(&self) -> Result<Option<Value>, SerdeError> {
-        if let Some(v) = &self.body {
-            let val = serde_json::to_value(v)?;
-            return Ok(Some(val));
-        }
-        Ok(None)
+        self.body.as_ref().map(serde_json::to_value).transpose()
     }
 
     pub fn get_uri(&self) -> String {

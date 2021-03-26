@@ -1,9 +1,4 @@
-use crate::{
-    cut::Register,
-    error::FrError,
-    frame::*,
-    utils::{get_jql_value, ordered_set, ordered_str_map},
-};
+use crate::{cut::Register, error::FrError, frame::*, utils::get_jql_value};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, to_value, Value};
 use std::collections::{BTreeMap, HashMap};
@@ -18,13 +13,13 @@ const INVALID_INSTRUCTION_TYPE_ERR: &str =
 #[derive(Serialize, Clone, Deserialize, Debug)]
 pub struct Response<'a> {
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub body:      Option<Value>,
+    pub body:       Option<Value>,
     //
     #[serde(flatten, skip_serializing_if = "Option::is_none")]
-    pub etc:       Option<Value>, // https://github.com/serde-rs/serde/issues/1626
+    pub etc:        Option<Value>, // https://github.com/serde-rs/serde/issues/1626
     #[serde(borrow, skip_serializing_if = "Option::is_none")]
-    pub validator: Option<Validator<'a>>,
-    pub status:    u32,
+    pub validation: Option<Validation<'a>>,
+    pub status:     u32,
 }
 
 impl<'a> Response<'a> {
@@ -75,19 +70,31 @@ impl<'a> Response<'a> {
 
         Ok(None)
     }
+
+    // /// Applies the validations usking the BTree key as the Value selector
+    // pub fn apply_validation(&mut self, other: &mut Self) -> Result<(), FrError> {
+    //     for (query, validation) in self.validator.iter() {
+    //         query.get_jql_value
+    //     }
+    //     Ok(())
+    // }
 }
 
 impl Default for Response<'_> {
     fn default() -> Self {
         Self {
-            body:      None,
-            etc:       Some(json!({})),
-            validator: None,
-            status:    0,
+            body:       None,
+            etc:        Some(json!({})),
+            validation: None,
+            status:     0,
         }
     }
 }
 
+/// PartialEq needs to exlcude self.validation to ensure that [Response::aply_validation] can
+/// diffentiatiate between the parent `Response` (the one pulled directle from the filmReel file)
+/// and the child `Response` (one deserialized from returned data) since the client validations
+/// should always be `None`
 impl<'a> PartialEq for Response<'a> {
     fn eq(&self, other: &Self) -> bool {
         self.body.eq(&other.body) && self.etc.eq(&other.etc) && self.status.eq(&other.status)
@@ -96,11 +103,12 @@ impl<'a> PartialEq for Response<'a> {
 
 impl<'a> Eq for Response<'a> {}
 
-type Validator<'a> = BTreeMap<&'a str, Validation>;
+type Validation<'a> = BTreeMap<&'a str, Validator>;
 
+/// Validator represents one validation ruleset applied to a single JSON selection
 #[derive(Serialize, Clone, Deserialize, Default, Debug, PartialEq)]
 #[serde(default)]
-pub struct Validation {
+pub struct Validator {
     strict: bool,
     sorted: bool,
 }
