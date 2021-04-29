@@ -5,6 +5,7 @@ use crate::{
     utils::{get_jql_value, new_selector, Selector},
 };
 use serde::{Deserialize, Serialize};
+use serde_hashkey::{to_key, Key};
 use serde_json::{json, to_value, Value};
 use std::collections::{BTreeMap, HashMap};
 
@@ -274,21 +275,25 @@ impl Validator {
                 };
 
                 // Create a lookup hashmap for self_selection.
-                let mut self_selection_hash: HashMap<&str, &Value> = HashMap::new();
+                let mut self_selection_hash: HashMap<Key, bool> = HashMap::new();
                 self_selection.iter().for_each(|s| {
-                    let x = s.as_str();
-                    match x {
-                        Some(x) => self_selection_hash.insert(x, s),
-                        None => None,
+                    let key = to_key(&s);
+                    match key {
+                        Ok(k) => {
+                            self_selection_hash.insert(k, true);
+                        }
+                        Err(_) => {}
                     };
                 });
                 // Create a lookup hashmap for other_selection.
-                let mut other_selection_hash: HashMap<&str, &Value> = HashMap::new();
+                let mut other_selection_hash: HashMap<Key, bool> = HashMap::new();
                 other_selection.iter().for_each(|s| {
-                    let x = s.as_str();
-                    match x {
-                        Some(x) => other_selection_hash.insert(x, s),
-                        None => None,
+                    let key = to_key(&s);
+                    match key {
+                        Ok(k) => {
+                            other_selection_hash.insert(k, true);
+                        }
+                        Err(_) => {}
                     };
                 });
 
@@ -298,10 +303,10 @@ impl Validator {
                 let mut new_other_selection: Vec<Value> = self_selection_clone
                     .iter()
                     .filter(|&s| {
-                        let x = s.as_str();
-                        match x {
-                            Some(x) => other_selection_hash.contains_key(x),
-                            None => false,
+                        let key = to_key(&s);
+                        match key {
+                            Ok(k) => other_selection_hash.contains_key(&k),
+                            Err(_) => false,
                         }
                     })
                     .map(|x| x.clone())
@@ -310,15 +315,15 @@ impl Validator {
                 // Append to this new array the elements from other_selection that are not in
                 // self_selection.
                 for s in other_selection.clone().iter() {
-                    let x = s.as_str();
-                    match x {
-                        Some(x) => {
-                            if !self_selection_hash.contains_key(x) {
+                    let key = to_key(&s);
+                    match key {
+                        Ok(k) => {
+                            if !self_selection_hash.contains_key(&k) {
                                 new_other_selection.push(s.clone());
                             }
                         }
-                        None => continue,
-                    }
+                        Err(_) => {}
+                    };
                 }
 
                 *other_selection = new_other_selection.into();
@@ -522,35 +527,45 @@ mod tests {
             ),
             2 => (
                 frame_obj_response,
-                r#"{"body":{"A":true,"B":true,"C":true,"D":true},"status":200}"#,
+                r#"{"body":{"A":true,"B":false,"C":true},"status":200}"#,
                 false,
             ),
             3 => (
                 frame_obj_response,
-                r#"{"body":{"A":true,"B":true},"status":200}"#,
+                r#"{"body":{"A":true,"B":true,"C":true,"D":true},"status":200}"#,
                 false,
             ),
             4 => (
                 frame_obj_response,
-                r#"{"body":{"B":true,"C":true,"A":true},"status":200}"#,
-                true,
+                r#"{"body":{"A":true,"B":true},"status":200}"#,
+                false,
             ),
             5 => (
-                frame_arr_response,
-                r#"{"body":["A","B","C"],"status":200}"#,
+                frame_obj_response,
+                r#"{"body":{"B":true,"C":true,"A":true},"status":200}"#,
                 true,
             ),
             6 => (
                 frame_arr_response,
+                r#"{"body":["A","B","C"],"status":200}"#,
+                true,
+            ),
+            7 => (
+                frame_arr_response,
                 r#"{"body":["other_value",false,"A","B","C"],"status":200}"#,
                 false,
             ),
-            7 => (
+            8 => (
+                frame_arr_response,
+                r#"{"body":[false,false,"A","B","C"],"status":200}"#,
+                false,
+            ),
+            9 => (
                 frame_arr_response,
                 r#"{"body":["B","A","C"],"status":200}"#,
                 true,
             ),
-            8 => (
+            10 => (
                 frame_arr_response,
                 r#"{"body":["B","A","D","C"],"status":200}"#,
                 false,
@@ -568,7 +583,9 @@ mod tests {
         case(unordered_case(5)),
         case(unordered_case(6)),
         case(unordered_case(7)),
-        case(unordered_case(8))
+        case(unordered_case(8)),
+        case(unordered_case(9)),
+        case(unordered_case(10))
     )]
     fn test_unordered_validation(t_case: (&str, &str, bool)) {
         let mut frame: Response = serde_json::from_str(t_case.0).unwrap();
