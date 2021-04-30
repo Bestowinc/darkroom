@@ -277,23 +277,15 @@ impl Validator {
                 // Create a lookup hashmap for self_selection.
                 let mut self_selection_hash: HashMap<Key, bool> = HashMap::new();
                 self_selection.iter().for_each(|s| {
-                    let key = to_key(&s);
-                    match key {
-                        Ok(k) => {
-                            self_selection_hash.insert(k, true);
-                        }
-                        Err(_) => {}
+                    if let Ok(k) = to_key(&s) {
+                        self_selection_hash.insert(k, true);
                     };
                 });
                 // Create a lookup hashmap for other_selection.
                 let mut other_selection_hash: HashMap<Key, bool> = HashMap::new();
                 other_selection.iter().for_each(|s| {
-                    let key = to_key(&s);
-                    match key {
-                        Ok(k) => {
-                            other_selection_hash.insert(k, true);
-                        }
-                        Err(_) => {}
+                    if let Ok(k) = to_key(&s) {
+                        other_selection_hash.insert(k, true);
                     };
                 });
 
@@ -309,24 +301,20 @@ impl Validator {
                             Err(_) => false,
                         }
                     })
-                    .map(|x| x.clone())
+                    .cloned()
                     .collect();
 
                 // Append to this new array the elements from other_selection that are not in
                 // self_selection.
                 for s in other_selection.clone().iter() {
-                    let key = to_key(&s);
-                    match key {
-                        Ok(k) => {
-                            if !self_selection_hash.contains_key(&k) {
-                                new_other_selection.push(s.clone());
-                            }
+                    if let Ok(k) = to_key(&s) {
+                        if !self_selection_hash.contains_key(&k) {
+                            new_other_selection.push(s.clone());
                         }
-                        Err(_) => {}
                     };
                 }
 
-                *other_selection = new_other_selection.into();
+                *other_selection = new_other_selection;
 
                 Ok(())
             }
