@@ -284,15 +284,18 @@ impl Validator {
                 let other_keys: HashMap<Key<_>, usize> = other_selection
                     .iter()
                     .enumerate()
-                    .map(|(i, v)| match to_key_with_ordered_float(v) { // (i: usize, v: &Value)
+                    .map(|(i, v)| match to_key_with_ordered_float(v) {
+                        // (i: usize, v: &Value)
                         Ok(k) => Ok((k, i)),
-                        Err(e) => Err(e)
-                    }) // Result<(Key, usize), Error>
+                        Err(e) => Err(e),
+                    })
                     .collect::<Result<HashMap<Key<_>, usize>, _>>()
                     .map_err(|e| FrError::Parse(e.to_string()))?;
 
+                // a Vector of index positions
+                // for a value found in both self and other
                 // Vec<(self_index: usize, other_index: usize)>
-                let mut intersects: Vec<(usize, usize)> = self_selection.iter()
+                let mut val_match_indices: Vec<(usize, usize)> = self_selection.iter()
                     .map(to_key_with_ordered_float)// Result<Key, Error>
                     .collect::<Result<Vec<Key<_>>, _>>()
                     .map_err(|e| FrError::Parse(e.to_string()))?
@@ -302,11 +305,11 @@ impl Validator {
                     .enumerate()                   // usize -> Enumerate<(self_index: usize, other_index: usize)>
                     .collect();
 
-                intersects.sort_by(|a, b| a.1.cmp(&b.1));
+                val_match_indices.sort_by(|a, b| a.1.cmp(&b.1));
 
                 // we've found no intersections
                 // return early
-                if intersects.is_empty() {
+                if val_match_indices.is_empty() {
                     return Ok(());
                 }
 
@@ -346,8 +349,8 @@ impl Validator {
                 // i= 0 v=2:
                 // Other.remove(2) -> A; Other == [other_value, false      ]; inter[0] <- A; intersection == [A, B, C      ]
                 // ----------------
-                let mut intersection: Vec<Value> = vec![Value::Null; intersects.len()];
-                for (i, v) in intersects.into_iter().rev() {
+                let mut intersection: Vec<Value> = vec![Value::Null; val_match_indices.len()];
+                for (i, v) in val_match_indices.into_iter().rev() {
                     let removed = other_selection.remove(v);
                     intersection[i] = removed;
                 }
