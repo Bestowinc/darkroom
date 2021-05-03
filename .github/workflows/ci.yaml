@@ -13,8 +13,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-        with:
-          submodules: recursive
       - uses: actions-rs/toolchain@v1
         with: # use nightly rustfmt rules
           toolchain: nightly
@@ -34,6 +32,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
+      - run: pwd; ls; ls ..; ls ./filmreel_md
       - run: cargo test --verbose --all
   examples:
     name: examples
