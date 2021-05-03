@@ -5,9 +5,12 @@ use crate::{
     utils::{get_jql_value, new_selector, Selector},
 };
 use serde::{Deserialize, Serialize};
-use serde_hashkey::{to_key, Key};
+use serde_hashkey::{to_key_with_ordered_float, Key};
 use serde_json::{json, to_value, Value};
-use std::collections::{BTreeMap, HashMap};
+use std::{
+    cmp::Reverse,
+    collections::{BTreeMap, HashMap, HashSet},
+};
 
 const INVALID_INSTRUCTION_TYPE_ERR: &str =
     "Frame write instruction did not correspond to a string object";
@@ -127,6 +130,10 @@ impl<'a> Response<'a> {
                 }
             }
         }
+
+        // for comparison's sake set validtion to None once applying is finished
+        self.validation = None;
+
         Ok(())
     }
 }
@@ -273,48 +280,81 @@ impl Validator {
                     Some(Value::Array(o)) => o,
                     _ => return Ok(()),
                 };
-
                 // Create a lookup hashmap for self_selection.
-                let mut self_selection_hash: HashMap<Key, bool> = HashMap::new();
-                self_selection.iter().for_each(|s| {
-                    if let Ok(k) = to_key(&s) {
-                        self_selection_hash.insert(k, true);
-                    };
-                });
-                // Create a lookup hashmap for other_selection.
-                let mut other_selection_hash: HashMap<Key, bool> = HashMap::new();
-                other_selection.iter().for_each(|s| {
-                    if let Ok(k) = to_key(&s) {
-                        other_selection_hash.insert(k, true);
-                    };
-                });
-
-                // Create a new array containing the ordered elements from self_selection that are
-                // also in other_selection.
-                let self_selection_clone = self_selection.clone();
-                let mut new_other_selection: Vec<Value> = self_selection_clone
+                let other_keys: HashMap<Key<_>, usize> = other_selection
                     .iter()
-                    .filter(|&s| {
-                        let key = to_key(&s);
-                        match key {
-                            Ok(k) => other_selection_hash.contains_key(&k),
-                            Err(_) => false,
-                        }
-                    })
-                    .cloned()
+                    .enumerate()
+                    .map(|(i, v)| match to_key_with_ordered_float(v) { // (i: usize, v: &Value)
+                        Ok(k) => Ok((k, i)),
+                        Err(e) => Err(e)
+                    }) // Result<(Key, usize), Error>
+                    .collect::<Result<HashMap<Key<_>, usize>, _>>()
+                    .map_err(|e| FrError::Parse(e.to_string()))?;
+
+                // Vec<(self_index: usize, other_index: usize)>
+                let mut intersects: Vec<(usize, usize)> = self_selection.iter()
+                    .map(to_key_with_ordered_float)// Result<Key, Error>
+                    .collect::<Result<Vec<Key<_>>, _>>()
+                    .map_err(|e| FrError::Parse(e.to_string()))?
+                    .into_iter()                   // IntoIterator<Item=Key>
+                    .map(|k| other_keys.get(&k))   // Option<&usize>
+                    .filter_map(|x| x.copied())    // Option<&usize> -> usize
+                    .enumerate()                   // usize -> Enumerate<(self_index: usize, other_index: usize)>
                     .collect();
 
-                // Append to this new array the elements from other_selection that are not in
-                // self_selection.
-                for s in other_selection.clone().iter() {
-                    if let Ok(k) = to_key(&s) {
-                        if !self_selection_hash.contains_key(&k) {
-                            new_other_selection.push(s.clone());
-                        }
-                    };
+                intersects.sort_by(|a, b| a.1.cmp(&b.1));
+
+                // we've found no intersections
+                // return early
+                if intersects.is_empty() {
+                    return Ok(());
                 }
 
-                *other_selection = new_other_selection;
+                // remove from other_selection starting with the last index of other
+                // and inserting it into the index of where it is found in self
+                // ----------------
+                // Self:  [A, B, C]
+                // Other: [B, A, C]
+                //
+                // Expected intersections/inter sorted by index of Other:
+                // Self[2] == Other[2]; (2,2)
+                // Self[0] == Other[1]; (0,1)
+                // Self[1] == Other[0]; (1,0)
+                //
+                // Expected iterations:
+                // i=2 v=2:
+                // Other.remove(2) -> C; Other == [B, A ]; inter[2] <- C; inter == [Null, Null, C]
+                // i=0 v=1:
+                // Other.remove(1) -> A; Other == [B    ]; inter[0] <- C; inter == [A,    Null, C]
+                // i=1 v=0:
+                // Other.remove(0) -> B; Other == [     ]; inter[1] <- C; inter == [A, B, C      ]
+                //
+                // ----------------
+                // Self:  [A, B, C]
+                // Other: [other_value, false, A, B, C]
+                //
+                // Expected intersections/inter sorted by index of Other:
+                // Self[2] == Other[4]; (2,4)
+                // Self[1] == Other[3]; (1,3)
+                // Self[0] == Other[2]; (0,2)
+                //
+                // Expected iterations:
+                // i= 2 v=4:
+                // Other.remove(4) -> C; Other == [other_value, false, A, B]; inter[2] <- C; intersection == [Null, Null, C]
+                // i= 1 v=3:
+                // Other.remove(3) -> B; Other == [other_value, false, A   ]; inter[1] <- B; intersection == [A,    Null, C]
+                // i= 0 v=2:
+                // Other.remove(2) -> A; Other == [other_value, false      ]; inter[0] <- A; intersection == [A, B, C      ]
+                // ----------------
+                let mut intersection: Vec<Value> = vec![Value::Null; intersects.len()];
+                for (i, v) in intersects.into_iter().rev() {
+                    let removed = other_selection.remove(v);
+                    intersection[i] = removed;
+                }
+                // intersection.append(other_selection);
+
+                other_selection.splice(0..0, intersection.into_iter());
+                // * other_selection = intersection;
 
                 Ok(())
             }
@@ -506,6 +546,22 @@ mod tests {
   "status": 200
 }
     "#;
+        let frame_arr_with_f32 = r#"
+{
+  "validation": {
+    "'response'.'body'": {
+      "unordered": true
+    }
+  },
+  "body": [
+    "A",
+    "B",
+    "C",
+    13.37
+  ],
+  "status": 200
+}
+            "#;
 
         match case {
             1 => (
@@ -558,6 +614,11 @@ mod tests {
                 r#"{"body":["B","A","D","C"],"status":200}"#,
                 false,
             ),
+            11 => (
+                frame_arr_with_f32,
+                r#"{"body":["C", 13.37, "B", "A"],"status": 200}"#,
+                true,
+            ),
             _ => panic!(),
         }
     }
@@ -573,7 +634,8 @@ mod tests {
         case(unordered_case(7)),
         case(unordered_case(8)),
         case(unordered_case(9)),
-        case(unordered_case(10))
+        case(unordered_case(10)),
+        case(unordered_case(11))
     )]
     fn test_unordered_validation(t_case: (&str, &str, bool)) {
         let mut frame: Response = serde_json::from_str(t_case.0).unwrap();
