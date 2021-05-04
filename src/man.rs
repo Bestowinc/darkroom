@@ -20,7 +20,7 @@ const fn cut() -> &'static [u8] {
 }
 
 const fn reel() -> &'static [u8] {
-    include_bytes!("../filmreel_md/reel.md")
+    include_bytes!("../filmreel_md/Reel.md")
 }
 
 const fn hidden_variables() -> &'static [u8] {
@@ -32,9 +32,7 @@ const fn ignored_variables() -> &'static [u8] {
 }
 
 const fn merge_cuts() -> &'static [u8] {
-    include_bytes!(std::fs::canonicalize(
-        "../filmreel_md/extra_concepts/merge_cuts.md"
-    ))
+    include_bytes!("../filmreel_md/extra_concepts/merge_cuts.md")
 }
 
 const fn retry_attempts() -> &'static [u8] {

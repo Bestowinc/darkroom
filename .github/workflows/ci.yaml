@@ -32,7 +32,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
-      - run: ls src/../filmreel_md/; cargo test --verbose --all
+      - run: cargo test --verbose --workspace
   examples:
     name: examples
     runs-on: ubuntu-latest
