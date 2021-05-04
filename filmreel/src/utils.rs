@@ -33,7 +33,7 @@ where
 }
 
 #[cfg(feature = "full_jql")]
-pub fn get_jql_value(val: &Value, query: &str) -> Result<Value, FrError> {
+pub fn select_value(val: &Value, query: &str) -> Result<Value, FrError> {
     let selectors = query.replace("'", "\"");
     match jql::walker(val, Some(&selectors)) {
         Ok(v) => match v {
