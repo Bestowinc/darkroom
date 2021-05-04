@@ -32,7 +32,9 @@ const fn ignored_variables() -> &'static [u8] {
 }
 
 const fn merge_cuts() -> &'static [u8] {
-    include_bytes!("../filmreel_md/extra_concepts/merge_cuts.md")
+    include_bytes!(std::fs::canonicalize(
+        "../filmreel_md/extra_concepts/merge_cuts.md"
+    ))
 }
 
 const fn retry_attempts() -> &'static [u8] {
