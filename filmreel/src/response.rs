@@ -5,9 +5,10 @@ use crate::{
     utils::{get_jql_value, new_selector, Selector},
 };
 use serde::{Deserialize, Serialize};
-use serde_hashkey::{to_key_with_ordered_float, Key};
+use serde_hashkey::{to_key_with_ordered_float as to_key, Key};
 use serde_json::{json, to_value, Value};
 use std::{
+    cell::Cell,
     cmp::Reverse,
     collections::{BTreeMap, HashMap, HashSet},
 };
@@ -277,6 +278,42 @@ impl Validator {
         }
         Ok(())
     }
+    // What if dupes in self
+    // Self:  [            A, A, B, C]
+    // for i=0, Self[0] is found: in Other[0]
+    // Other: [A, B, B, C, A, B, C]
+    // then Search range [1:] for A
+    // then Search range [6:] for B
+    // then Search range [7:] for C
+    // Self:  [            A, A, B, C]
+    // unordered then partial
+    // Other: [A, B, B, C, A, B, C]
+    // Intersections: [0, 4, 5, 6]
+    // Other: [A, A, B, C, B, B, C]
+    // partial:
+    // Other: [A, B, B, C]
+
+    // What if dupes in self
+    // Self:  [            A, C, A, B, C]
+    // for i=0, Self[0] is found: in Other[0]
+    // Other: [C, A, B, B, A, B, C]
+    // then Search range [2:] for A
+    // then Search range [4:] for C
+    // then Search range [6:] for B
+    // then Search range [7:] for C
+    // Initial Map to be:
+    // Self of [0] <HashOf<A>, mut 1>
+    // Self of [1] <HashOf<B>, mut 2>
+    // Self of [2] <HashOf<C>, mut 0>
+    // Self:  [            A, C, A, B, C]
+    // Other: [C, A, B, B, A, B, C]
+    //
+    // HashMap<key: HashMap<A>,key: Vec<usize>>
+    // Self[0] <HashOf<A>, Vec<0,4> // now lookup for A is [:]    => [0+1:]
+    // Self[1] <HashOf<C>, Vec<0,6> // now lookup for C is [:]    => [1+1:]
+    // Self[3] <HashOf<B>, Vec<2,3,5> // now lookup for B is [:]    => [2+1:]
+    //
+    // Self of [2] <HashOf<A>, mut 4> meaning next A will be in range [4+1:]
 
     fn apply_unordered(
         &self,
@@ -295,37 +332,62 @@ impl Validator {
                     _ => return Ok(()),
                 };
                 // Create a lookup hashmap for self_selection.
-                let other_keys: HashMap<Key<_>, usize> = other_selection
+                let mut filter_keys: HashSet<usize> = HashSet::new();
+                let mut other_keys: HashMap<Key<_>, Vec<usize>> = other_selection
                     .iter()
                     .enumerate()
-                    .map(|(i, v)| match to_key_with_ordered_float(v) {
-                        // (i: usize, v: &Value)
-                        Ok(k) => Ok((k, i)),
+                    // (i: usize, v: &Value)
+                    .map(|(i, v)| match to_key(v) {
+                        Ok(k) => {
+                            // retain reference of key to be removed so we can swap it
+                            // with a Value::Null when doing substitution
+                            filter_keys.insert(i);
+                            Ok((k, vec![i]))
+                        }
                         Err(e) => Err(e),
                     })
-                    .collect::<Result<HashMap<Key<_>, usize>, _>>()
+                    .collect::<Result<HashMap<Key<_>, Vec<usize>>, _>>()
                     .map_err(|e| FrError::Parse(e.to_string()))?;
 
                 // a Vector of index positions
                 // for a value found in both self and other
                 // Vec<(self_index: usize, other_index: usize)>
-                let mut val_match_indices: Vec<(usize, usize)> = self_selection.iter()
-                    .map(to_key_with_ordered_float)// Result<Key, Error>
-                    .collect::<Result<Vec<Key<_>>, _>>()
-                    .map_err(|e| FrError::Parse(e.to_string()))?
-                    .into_iter()                   // IntoIterator<Item=Key>
-                    .map(|k| other_keys.get(&k))   // Option<&usize>
-                    .filter_map(|x| x.copied())    // Option<&usize> -> usize
-                    .enumerate()                   // usize -> Enumerate<(self_index: usize, other_index: usize)>
-                    .collect();
+                // let mut val_match_indices: Vec<(usize, usize)> = self_selection.iter()
+                //     .map(to_key)// Result<Key, Error>
+                //     .collect::<Result<Vec<Key<_>>, _>>()
+                //     .map_err(|e| FrError::Parse(e.to_string()))?
+                //     .into_iter()                   // IntoIterator<Item=Key>
+                //     .map(|k| other_keys.get(&k))   // Option<&usize>
+                //     .filter_map(|x| x.copied())    // Option<&usize> -> usize
+                //     .enumerate()                   // usize -> Enumerate<(self_index: usize, other_index: usize)>
+                //     .collect();
 
-                val_match_indices.sort_by(|a, b| a.1.cmp(&b.1));
+                let mut match_sink: Vec<Value> = vec![Value::Null; filter_keys.len()];
+                for (self_i, v) in self_selection.iter().enumerate() {
+                    println!("{:?}", &other_selection);
+
+                    let v_hash = to_key(v).map_err(|e| FrError::Parse(e.to_string()))?;
+
+                    if let Some(other_hash_idxs) = other_keys.get_mut(&v_hash) {
+                        let from_idx = other_hash_idxs[0];
+                        let to_idx = self_i;
+
+                        // Swap places with the Value::Null in the match_sink so that values in
+                        // Other maintain a valid index reference
+                        std::mem::swap(&mut match_sink[to_idx], &mut other_selection[from_idx]);
+
+                        // remove idx from Vec so that it is not reused
+                        other_hash_idxs.remove(0);
+                    }
+                }
+
+                // val_match_indices.sort_by(|a, b| a.1.cmp(&b.1));
 
                 // we've found no intersections
                 // return early
-                if val_match_indices.is_empty() {
-                    return Ok(());
-                }
+                // if val_match_indices.is_empty() {
+                //     return Ok(());
+                // }
 
                 // remove from other_selection starting with the last index of other
                 // and inserting it into the index of where it is found in self
@@ -363,15 +425,17 @@ impl Validator {
                 // i= 0 v=2:
                 // Other.remove(2) -> A; Other == [other_value, false      ]; inter[0] <- A; intersection == [A, B, C      ]
                 // ----------------
-                let mut intersection: Vec<Value> = vec![Value::Null; val_match_indices.len()];
-                for (i, v) in val_match_indices.into_iter().rev() {
-                    let removed = other_selection.remove(v);
-                    intersection[i] = removed;
-                }
+                // let mut intersection: Vec<Value> = vec![Value::Null; val_match_indices.len()];
+                // for (i, v) in val_match_indices.into_iter().rev() {
+                //     let removed = other_selection.remove(v);
+                //     intersection[i] = removed;
+                // }
                 // intersection.append(other_selection);
 
-                other_selection.splice(0..0, intersection.into_iter());
-                // * other_selection = intersection;
+                let mut i = 0;
+                // retain other_selection elements where index is no in filter_keys
+                other_selection.retain(|_| (!filter_keys.contains(&i), i += 1).0);
+                other_selection.splice(0..0, match_sink.into_iter());
 
                 Ok(())
             }
@@ -634,6 +698,11 @@ mod tests {
             11 => (
                 frame_arr_with_f32,
                 r#"{"body":["C", 13.37, "B", "A"],"status": 200}"#,
+                true,
+            ),
+            12 => (
+                frame_arr_response,
+                r#"{"body":["A", "C", 13.37, "B", "A"],"status": 200}"#,
                 true,
             ),
             _ => panic!(),
