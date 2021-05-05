@@ -2,7 +2,7 @@ use crate::{
     cut::Register,
     error::FrError,
     frame::*,
-    utils::{get_jql_value, new_selector, Selector},
+    utils::{new_mut_selector, select_value, MutSelector},
 };
 use serde::{Deserialize, Serialize};
 use serde_hashkey::{to_key_with_ordered_float as to_key, Key};
@@ -63,7 +63,7 @@ impl<'a> Response<'a> {
         let mut write_matches: HashMap<&str, Value> = HashMap::new();
         for (k, query) in set.writes.iter() {
             // ensure frame jql query returns a string object
-            let frame_str = match get_jql_value(&frame_response, query) {
+            let frame_str = match select_value(&frame_response, query) {
                 Ok(Value::String(v)) => Ok(v),
                 Ok(_) => Err(FrError::FrameParsef(
                     INVALID_INSTRUCTION_TYPE_ERR,
@@ -71,7 +71,7 @@ impl<'a> Response<'a> {
                 )),
                 Err(e) => Err(e),
             }?;
-            let payload_val = get_jql_value(&payload_response, query)?;
+            let payload_val = select_value(&payload_response, query)?;
 
             if let Value::String(payload_str) = &payload_val {
                 let write_match = Register::write_match(k, &frame_str, payload_str)?;
@@ -103,20 +103,28 @@ impl<'a> Response<'a> {
                 continue;
             }
 
-            let selector = new_selector(strip_query(k))?;
-            if v.unordered {
-                v.apply_unordered(
-                    &selector,
-                    self.body.as_mut().unwrap(),
-                    other.body.as_mut().unwrap(),
-                )?;
-            }
-            if v.partial {
-                v.apply_partial(
-                    &selector,
-                    self.body.as_mut().unwrap(),
-                    other.body.as_mut().unwrap(),
-                )?;
+            let selector = new_mut_selector(strip_query(k))?;
+            match (v.partial, v.unordered) {
+                (false, false) => {
+                    unreachable!();
+                }
+                (true, false) => {
+                    v.apply_partial(
+                        selector,
+                        self.body.as_mut().unwrap(), // T as Option<&mut Value>.unwrap()
+                        other.body.as_mut().unwrap(),
+                    )?;
+                }
+                (false, true) => {
+                    v.apply_unordered(
+                        selector,
+                        self.body.as_mut().unwrap(),
+                        other.body.as_mut().unwrap(),
+                    )?;
+                }
+                (true, true) => {
+                    unimplemented!();
+                }
             }
         }
 
@@ -180,7 +188,7 @@ impl Validator {
     // partial validation?
     fn apply_partial(
         &self,
-        selector: &Selector,
+        selector: MutSelector,
         self_body: &mut Value,
         other_body: &mut Value,
     ) -> Result<(), FrError> {
@@ -344,7 +352,7 @@ impl Validator {
     // ----------------
     fn apply_unordered(
         &self,
-        selector: &Selector,
+        selector: MutSelector,
         self_body: &mut Value,
         other_body: &mut Value,
     ) -> Result<(), FrError> {
