@@ -3,17 +3,12 @@ use colored::*;
 use pest::error::Error as PestError;
 use serde_hashkey::Error as HashKeyError;
 use serde_json::error::{Category, Error as SerdeError};
-use std::{error, fmt};
-
-pub type FrError<T> = FilmreelError<T>;
+use std::{error::Error, fmt};
 
 /// An error that occurred during parsing or hydrating a filmReel file
 #[derive(Debug, PartialEq)]
 #[non_exhaustive]
-pub enum FilmreelError<T>
-where
-    T: error::Error,
-{
+pub enum FrError {
     FrameParse(&'static str),
     FrameParsef(&'static str, String),
     ReelParsef(&'static str, String),
@@ -21,11 +16,12 @@ where
     WriteInstruction(&'static str),
     ReadInstructionf(&'static str, String),
     ReelParse(&'static str),
+    Serde(String),
     Parse(String),
-    Error(T),
+    Pest(PestError<Rule>),
 }
 
-impl<T> error::Error for FilmreelError<T> {
+impl Error for FrError {
     fn description(&self) -> &str {
         "Error related to filmReel"
     }
@@ -40,60 +36,56 @@ macro_rules! errorf {
     };
 }
 
-impl<T> From<T> for FilmreelError<T>
-where
-    T: error::Error,
-{
-    fn from(err: T) -> FilmreelError<T> {
-        Self(err)
-    }
-}
-
-impl<T> From<SerdeError> for FilmreelError<T> {
-    fn from(err: SerdeError) -> FilmreelError<T> {
+impl From<SerdeError> for FrError {
+    fn from(err: SerdeError) -> FrError {
         match err.classify() {
             Category::Io => unreachable!(),
-            Category::Syntax | Category::Data | Category::Eof => {
-                FilmreelError::Serde(err.to_string())
-            }
+            Category::Syntax | Category::Data | Category::Eof => FrError::Serde(err.to_string()),
         }
     }
 }
 
-impl<T> From<PestError<Rule>> for FilmreelError<T> {
-    fn from(err: PestError<Rule>) -> FilmreelError<T> {
+impl From<PestError<Rule>> for FrError {
+    fn from(err: PestError<Rule>) -> FrError {
         Self::Pest(err)
     }
 }
 
-impl<T> fmt::Display for FilmreelError<T>
-where
-    T: error::Error,
-{
+impl From<HashKeyError> for FrError {
+    fn from(err: HashKeyError) -> FrError {
+        Self::Parse(err.to_string())
+    }
+}
+
+impl fmt::Display for FrError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            FilmreelError::FrameParse(msg) => write!(f, "FrameParseError: {}", msg),
-            FilmreelError::ReelParse(msg) => write!(f, "ReelParseError: {}", msg),
-            FilmreelError::WriteInstruction(msg) => write!(f, "WriteInstructionError: {}", msg),
-            FilmreelError::ReadInstruction(msg) => write!(f, "ReadInstructionError: {}", msg),
-            FilmreelError::FrameParsef(msg, item) => {
+            FrError::FrameParse(msg) => write!(f, "FrameParseError: {}", msg),
+            FrError::ReelParse(msg) => write!(f, "ReelParseError: {}", msg),
+            FrError::WriteInstruction(msg) => write!(f, "WriteInstructionError: {}", msg),
+            FrError::ReadInstruction(msg) => write!(f, "ReadInstructionError: {}", msg),
+            FrError::FrameParsef(msg, item) => {
                 errorf!(f, "FrameParseError", msg, item);
                 Ok(())
             }
-            FilmreelError::ReelParsef(msg, item) => {
+            FrError::ReelParsef(msg, item) => {
                 errorf!(f, "ReelParseError", msg, item);
                 Ok(())
             }
-            FilmreelError::ReadInstructionf(msg, item) => {
+            FrError::ReadInstructionf(msg, item) => {
                 errorf!(f, "ReadInstructionError", msg, item);
                 Ok(())
             }
-            FilmreelError::Parse(msg) => {
+            FrError::Serde(msg) => {
+                writeln!(f, "SerdeError {} {}", "-->".red(), msg)?;
+                Ok(())
+            }
+            FrError::Parse(msg) => {
                 writeln!(f, "ParseError {} {}", "-->".red(), msg)?;
                 Ok(())
             }
-            FilmreelError::Error(msg) => {
-                writeln!(f, "Error {} {}", "-->".red(), msg)?;
+            FrError::Pest(msg) => {
+                writeln!(f, "PestError {} {}", "-->".red(), msg)?;
                 Ok(())
             }
         }

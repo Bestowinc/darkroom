@@ -108,27 +108,19 @@ impl<'a> Response<'a> {
             }
 
             let selector = new_selector(strip_query(k))?;
-            match (v.partial, v.unordered) {
-                (false, false) => {
-                    unreachable!();
-                }
-                (true, false) => {
-                    v.apply_partial(
-                        selector,
-                        self.body.as_mut().unwrap(), // T as Option<&mut Value>.unwrap()
-                        other.body.as_mut().unwrap(),
-                    )?;
-                }
-                (false, true) => {
-                    v.apply_unordered(
-                        selector,
-                        self.body.as_mut().unwrap(),
-                        other.body.as_mut().unwrap(),
-                    )?;
-                }
-                (true, true) => {
-                    unimplemented!();
-                }
+            if v.unordered {
+                v.apply_unordered(
+                    &selector,
+                    self.body.as_mut().unwrap(),
+                    other.body.as_mut().unwrap(),
+                )?;
+            }
+            if v.partial {
+                v.apply_partial(
+                    &selector,
+                    self.body.as_mut().unwrap(),
+                    other.body.as_mut().unwrap(),
+                )?;
             }
         }
 
@@ -192,7 +184,7 @@ impl Validator {
     // partial validation?
     fn apply_partial(
         &self,
-        selector: Selector,
+        selector: &Selector,
         self_body: &mut Value,
         other_body: &mut Value,
     ) -> Result<(), FrError> {
@@ -321,18 +313,22 @@ impl Validator {
     // Self:  [A, B, C]
     // Other: [B, A, C]
     //
+    // filter_keys = (0..=2)
+    // other_keys = {B: [0], A: [1]:, C: [2]}
     // Expected intersections/inter sorted by index of Other:
     // Self[2] == Other[2]; (2,2)
     // Self[0] == Other[1]; (0,1)
     // Self[1] == Other[0]; (1,0)
     //
+    // Sink = [Null, Null, Null]
     // Expected iterations:
-    // i=2 v=2:
-    // Other.remove(2) -> C; Other == [B, A ]; inter[2] <- C; inter == [Null, Null, C]
+    // i=0 v=A:
+    // other_keys[A].remove(0) -> 1; swap Sink[0] <-> Other[1] <- C
+    // Sink == [Null, Null, C]
     // i=0 v=1:
-    // Other.remove(1) -> A; Other == [B    ]; inter[0] <- C; inter == [A,    Null, C]
+    // Other.remove(1) -> A; Other == [B    ]; Sink[0] <- C; Sink == [A,    Null, C]
     // i=1 v=0:
-    // Other.remove(0) -> B; Other == [     ]; inter[1] <- C; inter == [A, B, C      ]
+    // Other.remove(0) -> B; Other == [     ]; Sink[1] <- C; Sink == [A, B, C      ]
     //
     // ----------------
     // Self:  [A, B, C]
@@ -353,7 +349,7 @@ impl Validator {
     // ----------------
     fn apply_unordered(
         &self,
-        selector: Selector,
+        selector: &Selector,
         self_body: &mut Value,
         other_body: &mut Value,
     ) -> Result<(), FrError> {
@@ -367,8 +363,6 @@ impl Validator {
                     Some(Value::Array(o)) => o,
                     _ => return Ok(()),
                 };
-                // Create a lookup hashmap for self_selection.
-                let mut filter_keys: HashSet<usize> = HashSet::new();
                 // https://gist.github.com/daboross/976978d8200caf86e02acb6805961195
                 let mut other_keys: HashMap<Key<_>, Vec<usize>> = other_selection
                     .iter()
@@ -376,26 +370,31 @@ impl Validator {
                     // (i: usize, v: &Value)
                     .map(|(i, v)| match to_key(v) {
                         Ok(k) => {
-                            // retain reference of key to be removed so we can swap it
-                            // with a Value::Null when doing substitution
-                            filter_keys.insert(i);
                             Ok((k, vec![i]))
                         }
                         Err(e) => Err(e),
                     })
-                    .collect::<Result<HashMap<Key<_>, Vec<usize>>, _>>()
-                    .map_err(|e| FrError::Parse(e.to_string()))?;
+                    .collect::<Result<HashMap<Key<_>, Vec<usize>>, _>>()?;
 
-                let mut match_sink: Vec<Value> = vec![Value::Null; filter_keys.len()];
+                // retain list of all Other indices that have been swapped
+                // with placeholder elements
+                let mut filter_idxs: HashSet<usize> = HashSet::new();
+                let mut match_sink: BTreeMap<usize, Value> = BTreeMap::new();
                 for (to_idx, v) in self_selection.iter().enumerate() {
-                    let v_hash = to_key(v).map_err(|e| FrError::Parse(e.to_string()))?;
+                    let v_hash = to_key(v)?;
 
                     if let Some(other_idxs) = other_keys.get_mut(&v_hash) {
                         // remove idx from Vec so that it is not reused
                         let from_idx = other_idxs.remove(0);
-                        // Swap places with the Value::Null in the match_sink so that values in
+                        // retain reference of key to be removed so we can swap it
+                        // with a Null when doing substitution
+                        let mut to_value = Value::Null;
+                        // swap places with the Null in the match_sink so that values in
                         // Other maintain a valid index reference
-                        std::mem::swap(&mut match_sink[to_idx], &mut other_selection[from_idx]);
+                        std::mem::swap(&mut to_value, &mut other_selection[from_idx]);
+                        match_sink.insert(to_idx, to_value);
+                        // make sure to remove the Null after iteration
+                        filter_idxs.insert(from_idx);
                     }
                 }
 
@@ -407,9 +406,9 @@ impl Validator {
 
                 // retain other_selection elements where index is no in filter_keys
                 let mut i = 0;
-                other_selection.retain(|_| (!filter_keys.contains(&i), i += 1).0);
+                other_selection.retain(|_| (!filter_idxs.contains(&i), i += 1).0);
                 // https://stackoverflow.com/questions/47037573/how-to-prepend-a-slice-to-a-vec#answer-47037876
-                other_selection.splice(0..0, match_sink.into_iter());
+                other_selection.splice(0..0, match_sink.into_iter().map(|(_, v)| v));
 
                 Ok(())
             }
@@ -474,51 +473,34 @@ mod tests {
         assert_eq!(expected_match, mat.unwrap());
     }
 
+    const PARTIAL_FRAME: &str = r#"
+{
+  "validation": {
+    "'response'.'body'": {
+      "partial": true
+    }
+  },
+  "body": %s,
+  "status": 200
+}
+    "#;
     fn partial_case(case: u32) -> (&'static str, &'static str, bool) {
-        let frame_obj_response = r#"
-{
-  "validation": {
-    "'response'.'body'": {
-      "partial": true
-    }
-  },
-  "body": {
-    "A": true,
-    "B": true,
-    "C": true
-  },
-  "status": 200
-}
-    "#;
-        let frame_arr_response = r#"
-{
-  "validation": {
-    "'response'.'body'": {
-      "partial": true
-    }
-  },
-  "body": [
-    "A",
-    "B",
-    "C"
-  ],
-  "status": 200
-}
-    "#;
+        let with_obj = r#"{"A":true,"B":true,"C":true}"#;
+        let with_arr = r#"["A","B","C"]"#;
 
         match case {
             1 => (
-                frame_obj_response,
+                with_obj,
                 r#"{"body":{"A": true,"B": true,"C": true},"status": 200}"#,
                 true,
             ),
             2 => (
-                frame_obj_response,
+                with_obj,
                 r#"{"body":{"A": true,"B": true,"C": true, "D": true},"status": 200}"#,
                 true,
             ),
             3 => (
-                frame_obj_response,
+                with_obj,
                 r#"{"body":{"B": true,"C": true, "D": true},"status": 200}"#,
                 false,
             ),
@@ -529,18 +511,14 @@ mod tests {
                 r#"{"body":{"B": true,"C": true, "D": true},"status": 200}"#,
                 false,
             ),
-            5 => (
-                frame_arr_response,
-                r#"{"body":["A", "B", "C"],"status": 200}"#,
-                true,
-            ),
+            5 => (with_arr, r#"{"body":["A", "B", "C"],"status": 200}"#, true),
             6 => (
-                frame_arr_response,
+                with_arr,
                 r#"{"body":["other_value", false, "A", "B", "C"],"status": 200}"#,
                 true,
             ),
             7 => (
-                frame_arr_response,
+                with_arr,
                 r#"{"body":["other_value", false, "B", "C"],"status": 200}"#,
                 false,
             ),
@@ -559,7 +537,8 @@ mod tests {
         case(partial_case(7))
     )]
     fn test_partial_validation(t_case: (&str, &str, bool)) {
-        let mut frame: Response = serde_json::from_str(t_case.0).unwrap();
+        let self_response = str::replace(PARTIAL_FRAME, "%s", t_case.0);
+        let mut frame: Response = serde_json::from_str(&self_response).unwrap();
         let mut actual: Response = serde_json::from_str(t_case.1).unwrap();
         let should_match = t_case.2;
         frame.apply_validation(&mut actual).unwrap();
@@ -570,69 +549,22 @@ mod tests {
         }
     }
 
+    const UNORDERED_FRAME: &str = r#"
+{
+  "validation": {
+    "'response'.'body'": {
+      "unordered": true
+    }
+  },
+  "body": %s,
+  "status": 200
+}
+    "#;
     fn unordered_case(case: u32) -> (&'static str, &'static str, bool) {
-        let map_arr = r#"
-{
-  "validation": {
-    "'response'.'body'": {
-      "unordered": true
-    }
-  },
-  "body": {
-    "A": true,
-    "B": true,
-    "C": true
-  },
-  "status": 200
-}
-    "#;
-        let string_arr = r#"
-{
-  "validation": {
-    "'response'.'body'": {
-      "unordered": true
-    }
-  },
-  "body": [
-    "A",
-    "B",
-    "C"
-  ],
-  "status": 200
-}
-    "#;
-        let with_f32 = r#"
-{
-  "validation": {
-    "'response'.'body'": {
-      "unordered": true
-    }
-  },
-  "body": [
-    "A",
-    "B",
-    "C",
-    13.37
-  ],
-  "status": 200
-}
-            "#;
-        let arr_with_unsorted_dupes = r#"
-{
-  "validation": {
-    "'response'.'body'": {
-      "unordered": true
-    }
-  },
-  "body": [
-    "A",
-    "B",
-    "C",
-    13.37
-  ],
-  "status": 200
-}
-            "#;
+        let map_arr = r#"{"A":true,"B":true,"C":true}"#;
+        let string_arr = r#"["A","B","C"]"#;
+        let with_f32 = r#"["A","B","C",13.37]"#;
+        let with_dupes = r#"["A","B","C","A","A"]"#;
 
         match case {
             1 => (
@@ -683,8 +615,8 @@ mod tests {
                 true,
             ),
             12 => (
-                string_arr,
-                r#"{"body":["A", "C", 13.37, "B", "A"],"status": 200}"#,
+                with_dupes,
+                r#"{"body":["A", "C", "A", "B", "A"],"status": 200}"#,
                 true,
             ),
             _ => panic!(),
@@ -706,7 +638,8 @@ mod tests {
         case(unordered_case(11))
     )]
     fn test_unordered_validation(t_case: (&str, &str, bool)) {
-        let mut frame: Response = serde_json::from_str(t_case.0).unwrap();
+        let self_response = str::replace(UNORDERED_FRAME, "%s", t_case.0);
+        let mut frame: Response = serde_json::from_str(&self_response).unwrap();
         let mut actual: Response = serde_json::from_str(t_case.1).unwrap();
         let should_match = t_case.2;
         frame.apply_validation(&mut actual).unwrap();
