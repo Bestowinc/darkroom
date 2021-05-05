@@ -315,6 +315,42 @@ impl Validator {
     //
     // Self of [2] <HashOf<A>, mut 4> meaning next A will be in range [4+1:]
 
+    // remove from other_selection starting with the last index of other
+    // and inserting it into the index of where it is found in self
+    // ----------------
+    // Self:  [A, B, C]
+    // Other: [B, A, C]
+    //
+    // Expected intersections/inter sorted by index of Other:
+    // Self[2] == Other[2]; (2,2)
+    // Self[0] == Other[1]; (0,1)
+    // Self[1] == Other[0]; (1,0)
+    //
+    // Expected iterations:
+    // i=2 v=2:
+    // Other.remove(2) -> C; Other == [B, A ]; inter[2] <- C; inter == [Null, Null, C]
+    // i=0 v=1:
+    // Other.remove(1) -> A; Other == [B    ]; inter[0] <- C; inter == [A,    Null, C]
+    // i=1 v=0:
+    // Other.remove(0) -> B; Other == [     ]; inter[1] <- C; inter == [A, B, C      ]
+    //
+    // ----------------
+    // Self:  [A, B, C]
+    // Other: [other_value, false, A, B, C]
+    //
+    // Expected intersections/inter sorted by index of Other:
+    // Self[2] == Other[4]; (2,4)
+    // Self[1] == Other[3]; (1,3)
+    // Self[0] == Other[2]; (0,2)
+    //
+    // Expected iterations:
+    // i= 2 v=4:
+    // Other.remove(4) -> C; Other == [other_value, false, A, B]; inter[2] <- C; intersection == [Null, Null, C]
+    // i= 1 v=3:
+    // Other.remove(3) -> B; Other == [other_value, false, A   ]; inter[1] <- B; intersection == [A,    Null, C]
+    // i= 0 v=2:
+    // Other.remove(2) -> A; Other == [other_value, false      ]; inter[0] <- A; intersection == [A, B, C      ]
+    // ----------------
     fn apply_unordered(
         &self,
         selector: Selector,
@@ -333,6 +369,7 @@ impl Validator {
                 };
                 // Create a lookup hashmap for self_selection.
                 let mut filter_keys: HashSet<usize> = HashSet::new();
+                // https://gist.github.com/daboross/976978d8200caf86e02acb6805961195
                 let mut other_keys: HashMap<Key<_>, Vec<usize>> = other_selection
                     .iter()
                     .enumerate()
@@ -349,91 +386,27 @@ impl Validator {
                     .collect::<Result<HashMap<Key<_>, Vec<usize>>, _>>()
                     .map_err(|e| FrError::Parse(e.to_string()))?;
 
-                // a Vector of index positions
-                // for a value found in both self and other
-                // Vec<(self_index: usize, other_index: usize)>
-                // let mut val_match_indices: Vec<(usize, usize)> = self_selection.iter()
-                //     .map(to_key)// Result<Key, Error>
-                //     .collect::<Result<Vec<Key<_>>, _>>()
-                //     .map_err(|e| FrError::Parse(e.to_string()))?
-                //     .into_iter()                   // IntoIterator<Item=Key>
-                //     .map(|k| other_keys.get(&k))   // Option<&usize>
-                //     .filter_map(|x| x.copied())    // Option<&usize> -> usize
-                //     .enumerate()                   // usize -> Enumerate<(self_index: usize, other_index: usize)>
-                //     .collect();
-
                 let mut match_sink: Vec<Value> = vec![Value::Null; filter_keys.len()];
-                for (self_i, v) in self_selection.iter().enumerate() {
-                    println!("{:?}", &other_selection);
-
+                for (to_idx, v) in self_selection.iter().enumerate() {
                     let v_hash = to_key(v).map_err(|e| FrError::Parse(e.to_string()))?;
 
                     if let Some(other_hash_idxs) = other_keys.get_mut(&v_hash) {
-                        let from_idx = other_hash_idxs[0];
-                        let to_idx = self_i;
-
+                        // remove idx from Vec so that it is not reused
+                        let from_idx = other_hash_idxs.remove(0);
                         // Swap places with the Value::Null in the match_sink so that values in
                         // Other maintain a valid index reference
                         std::mem::swap(&mut match_sink[to_idx], &mut other_selection[from_idx]);
-
-                        // remove idx from Vec so that it is not reused
-                        other_hash_idxs.remove(0);
                     }
                 }
 
-                // val_match_indices.sort_by(|a, b| a.1.cmp(&b.1));
-
                 // we've found no intersections
                 // return early
-                // if val_match_indices.is_empty() {
-                //     return Ok(());
-                // }
+                if match_sink.is_empty() {
+                    return Ok(());
+                }
 
-                // remove from other_selection starting with the last index of other
-                // and inserting it into the index of where it is found in self
-                // ----------------
-                // Self:  [A, B, C]
-                // Other: [B, A, C]
-                //
-                // Expected intersections/inter sorted by index of Other:
-                // Self[2] == Other[2]; (2,2)
-                // Self[0] == Other[1]; (0,1)
-                // Self[1] == Other[0]; (1,0)
-                //
-                // Expected iterations:
-                // i=2 v=2:
-                // Other.remove(2) -> C; Other == [B, A ]; inter[2] <- C; inter == [Null, Null, C]
-                // i=0 v=1:
-                // Other.remove(1) -> A; Other == [B    ]; inter[0] <- C; inter == [A,    Null, C]
-                // i=1 v=0:
-                // Other.remove(0) -> B; Other == [     ]; inter[1] <- C; inter == [A, B, C      ]
-                //
-                // ----------------
-                // Self:  [A, B, C]
-                // Other: [other_value, false, A, B, C]
-                //
-                // Expected intersections/inter sorted by index of Other:
-                // Self[2] == Other[4]; (2,4)
-                // Self[1] == Other[3]; (1,3)
-                // Self[0] == Other[2]; (0,2)
-                //
-                // Expected iterations:
-                // i= 2 v=4:
-                // Other.remove(4) -> C; Other == [other_value, false, A, B]; inter[2] <- C; intersection == [Null, Null, C]
-                // i= 1 v=3:
-                // Other.remove(3) -> B; Other == [other_value, false, A   ]; inter[1] <- B; intersection == [A,    Null, C]
-                // i= 0 v=2:
-                // Other.remove(2) -> A; Other == [other_value, false      ]; inter[0] <- A; intersection == [A, B, C      ]
-                // ----------------
-                // let mut intersection: Vec<Value> = vec![Value::Null; val_match_indices.len()];
-                // for (i, v) in val_match_indices.into_iter().rev() {
-                //     let removed = other_selection.remove(v);
-                //     intersection[i] = removed;
-                // }
-                // intersection.append(other_selection);
-
-                let mut i = 0;
                 // retain other_selection elements where index is no in filter_keys
+                let mut i = 0;
                 other_selection.retain(|_| (!filter_keys.contains(&i), i += 1).0);
                 other_selection.splice(0..0, match_sink.into_iter());
 
