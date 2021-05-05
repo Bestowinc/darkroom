@@ -273,7 +273,7 @@ impl Validator {
 
     fn apply_unordered(
         &self,
-        selector: Selector,
+        selector: MutSelector,
         self_body: &mut Value,
         other_body: &mut Value,
     ) -> Result<(), FrError> {
