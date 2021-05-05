@@ -7,11 +7,7 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use serde_hashkey::{to_key_with_ordered_float as to_key, Key};
 use serde_json::{json, to_value, Value};
-use std::{
-    cell::Cell,
-    cmp::Reverse,
-    collections::{BTreeMap, HashMap, HashSet},
-};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 const INVALID_INSTRUCTION_TYPE_ERR: &str =
     "Frame write instruction did not correspond to a string object";
@@ -313,7 +309,6 @@ impl Validator {
     // Self:  [A, B, C]
     // Other: [B, A, C]
     //
-    // filter_keys = (0..=2)
     // other_keys = {B: [0], A: [1]:, C: [2]}
     // Expected intersections/inter sorted by index of Other:
     // Self[2] == Other[2]; (2,2)
@@ -473,6 +468,7 @@ mod tests {
         assert_eq!(expected_match, mat.unwrap());
     }
 
+    const SIMPLE_FRAME: &str = r#"{ "body": %s, "status": 200 }"#;
     const PARTIAL_FRAME: &str = r#"
 {
   "validation": {
@@ -489,39 +485,19 @@ mod tests {
         let with_arr = r#"["A","B","C"]"#;
 
         match case {
-            1 => (
-                with_obj,
-                r#"{"body":{"A": true,"B": true,"C": true},"status": 200}"#,
-                true,
-            ),
-            2 => (
-                with_obj,
-                r#"{"body":{"A": true,"B": true,"C": true, "D": true},"status": 200}"#,
-                true,
-            ),
-            3 => (
-                with_obj,
-                r#"{"body":{"B": true,"C": true, "D": true},"status": 200}"#,
-                false,
-            ),
+            1 => (with_obj, r#"{"A":true,"B":true,"C":true}"#, true),
+            2 => (with_obj, r#"{"A":true,"B":true,"C":true,"D":true}"#, true),
+            3 => (with_obj, r#"{"B":true,"C":true,"D":true}"#, false),
             4 => (
                 // explicitly declare partial validation as false
                 r#"{"validation":{"'response'.'body'":{"partial":false}},
-                    "body":{"A": true,"B": true, "C": true},"status": 200}"#,
-                r#"{"body":{"B": true,"C": true, "D": true},"status": 200}"#,
+                    "body":{"A": true,"B": true, "C": true}}"#,
+                r#"{"B": true,"C": true, "D": true}"#,
                 false,
             ),
-            5 => (with_arr, r#"{"body":["A", "B", "C"],"status": 200}"#, true),
-            6 => (
-                with_arr,
-                r#"{"body":["other_value", false, "A", "B", "C"],"status": 200}"#,
-                true,
-            ),
-            7 => (
-                with_arr,
-                r#"{"body":["other_value", false, "B", "C"],"status": 200}"#,
-                false,
-            ),
+            5 => (with_arr, r#"["A", "B", "C"]"#, true),
+            6 => (with_arr, r#"["other_value", false, "A", "B", "C"]"#, true),
+            7 => (with_arr, r#"["other_value", false, "B", "C"]"#, false),
             _ => panic!(),
         }
     }
@@ -538,14 +514,18 @@ mod tests {
     )]
     fn test_partial_validation(t_case: (&str, &str, bool)) {
         let self_response = str::replace(PARTIAL_FRAME, "%s", t_case.0);
+        let other_response = str::replace(SIMPLE_FRAME, "%s", t_case.1);
+
         let mut frame: Response = serde_json::from_str(&self_response).unwrap();
-        let mut actual: Response = serde_json::from_str(t_case.1).unwrap();
+        let mut other_frame: Response = serde_json::from_str(&other_response).unwrap();
         let should_match = t_case.2;
-        frame.apply_validation(&mut actual).unwrap();
+
+        frame.apply_validation(&mut other_frame).unwrap();
+
         if should_match {
-            pretty_assertions::assert_eq!(frame, actual);
+            pretty_assertions::assert_eq!(frame, other_frame);
         } else {
-            pretty_assertions::assert_ne!(frame, actual);
+            pretty_assertions::assert_ne!(frame, other_frame);
         }
     }
 
@@ -567,58 +547,18 @@ mod tests {
         let with_dupes = r#"["A","B","C","A","A"]"#;
 
         match case {
-            1 => (
-                map_arr,
-                r#"{"body":{"A":true,"B":true,"C":true},"status":200}"#,
-                true,
-            ),
-            2 => (
-                map_arr,
-                r#"{"body":{"A":true,"B":false,"C":true},"status":200}"#,
-                false,
-            ),
-            3 => (
-                map_arr,
-                r#"{"body":{"A":true,"B":true,"C":true,"D":true},"status":200}"#,
-                false,
-            ),
-            4 => (
-                map_arr,
-                r#"{"body":{"A":true,"B":true},"status":200}"#,
-                false,
-            ),
-            5 => (
-                map_arr,
-                r#"{"body":{"B":true,"C":true,"A":true},"status":200}"#,
-                true,
-            ),
-            6 => (string_arr, r#"{"body":["A","B","C"],"status":200}"#, true),
-            7 => (
-                string_arr,
-                r#"{"body":["other_value",false,"A","B","C"],"status":200}"#,
-                false,
-            ),
-            8 => (
-                string_arr,
-                r#"{"body":[false,false,"A","B","C"],"status":200}"#,
-                false,
-            ),
-            9 => (string_arr, r#"{"body":["B","A","C"],"status":200}"#, true),
-            10 => (
-                string_arr,
-                r#"{"body":["B","A","D","C"],"status":200}"#,
-                false,
-            ),
-            11 => (
-                with_f32,
-                r#"{"body":["C", 13.37, "B", "A"],"status": 200}"#,
-                true,
-            ),
-            12 => (
-                with_dupes,
-                r#"{"body":["A", "C", "A", "B", "A"],"status": 200}"#,
-                true,
-            ),
+            1 => (map_arr, r#"{"A":true,"B":true,"C":true}"#, true),
+            2 => (map_arr, r#"{"A":true,"B":false,"C":true}"#, false),
+            3 => (map_arr, r#"{"A":true,"B":true,"C":true,"D":true}"#, false),
+            4 => (map_arr, r#"{"A":true,"B":true}"#, false),
+            5 => (map_arr, r#"{"B":true,"C":true,"A":true}"#, true),
+            6 => (string_arr, r#"["A","B","C"]"#, true),
+            7 => (string_arr, r#"["other_value",false,"A","B","C"]"#, false),
+            8 => (string_arr, r#"[false,false,"A","B","C"]"#, false),
+            9 => (string_arr, r#"["B","A","C"]"#, true),
+            10 => (string_arr, r#"["B","A","D","C"]"#, false),
+            11 => (with_f32, r#"["C", 13.37, "B", "A"]"#, true),
+            12 => (with_dupes, r#"["A", "C", "A", "B", "A"]"#, true),
             _ => panic!(),
         }
     }
@@ -639,14 +579,122 @@ mod tests {
     )]
     fn test_unordered_validation(t_case: (&str, &str, bool)) {
         let self_response = str::replace(UNORDERED_FRAME, "%s", t_case.0);
+        let other_response = str::replace(SIMPLE_FRAME, "%s", t_case.1);
+
         let mut frame: Response = serde_json::from_str(&self_response).unwrap();
-        let mut actual: Response = serde_json::from_str(t_case.1).unwrap();
+        let mut other_frame: Response = serde_json::from_str(&other_response).unwrap();
         let should_match = t_case.2;
-        frame.apply_validation(&mut actual).unwrap();
+
+        frame.apply_validation(&mut other_frame).unwrap();
         if should_match {
-            pretty_assertions::assert_eq!(frame, actual);
+            pretty_assertions::assert_eq!(frame, other_frame);
         } else {
-            pretty_assertions::assert_ne!(frame, actual);
+            pretty_assertions::assert_ne!(frame, other_frame);
         }
+    }
+
+    const PARTIAL_UNORDERED: &str = r#"
+{
+  "validation": {
+    "'response'.'body'": {
+      "partial": true,
+      "unordered": true
+    }
+  },
+  "body": %s,
+  "status": 200
+}
+    "#;
+
+    fn partial_unordered_case(case: u32) -> (&'static str, &'static str, &'static str) {
+        let string_arr = r#"["A","B","C"]"#;
+        let with_f32 = r#"["A","B","C",13.37]"#;
+        let with_dupes = r#"["A","B","C","A","A"]"#;
+
+        match case {
+            1 => (
+                r#"{"A":true,"B":true,"C":true}"#,
+                r#"{"A":true,"B":true,"C":true}"#,
+                r#"{"A":true,"B":true,"C":true}"#,
+            ),
+            2 => (
+                r#"{"A":true,"B":true,"C":true}"#,
+                r#"{"A":true,"B":false,"C":true}"#,
+                r#"{"A":true,"B":false,"C":true}"#,
+            ),
+            3 => (
+                r#"{"A":true,"B":true,"C":true}"#,
+                r#"{"D":true,"B":true,"C":true,"A":true}"#,
+                r#"{"A":true,"B":true,"C":true}"#,
+            ),
+            4 => (
+                r#"{"A":true,"B":true,"C":true}"#,
+                r#"{"B":true,"A":true,"A":true}"#,
+                r#"{"A":true,"B":true}"#,
+            ),
+            5 => (
+                r#"{"A":true,"B":true,"C":true}"#,
+                r#"{"B":true,"C":true,"A":true}"#,
+                r#"{"A":true,"B":true,"C":true}"#,
+            ),
+            6 => (r#"["A","B","C"]"#, r#"["F","C","C"]"#, r#"["C", "F", "C"]"#),
+            7 => (
+                r#"["A","B","C"]"#,
+                r#"["other_value",false,"A","B","C"]"#,
+                string_arr,
+            ),
+            8 => (
+                r#"["A","B","C"]"#,
+                r#"[false,false,"A","B","C"]"#,
+                string_arr,
+            ),
+            9 => (
+                r#"[0,"A",0,"C"]"#,
+                r#"["B","B","A","C","C","A"]"#,
+                r#"["A","C","B","B","A","C"]"#,
+            ),
+            10 => (r#"["A","B","C"]"#, r#"["B","A","D","C"]"#, string_arr),
+            11 => (
+                r#"["A","B","C",13.37]"#,
+                r#"["C", 13.37, "B", "A"]"#,
+                with_f32,
+            ),
+            12 => (
+                r#"["A","B","C","A","A"]"#,
+                r#"["A","C","A","B","A"]"#,
+                with_dupes,
+            ),
+            _ => panic!(),
+        }
+    }
+
+    #[rstest(
+        t_case,
+        case(partial_unordered_case(1)),
+        case(partial_unordered_case(2)),
+        case(partial_unordered_case(3)),
+        case(partial_unordered_case(4)),
+        case(partial_unordered_case(5)),
+        case(partial_unordered_case(6)),
+        case(partial_unordered_case(7)),
+        case(partial_unordered_case(8)),
+        case(partial_unordered_case(9)),
+        case(partial_unordered_case(10)),
+        case(partial_unordered_case(11))
+    )]
+    fn test_partial_unordered_validation(t_case: (&str, &str, &str)) {
+        let self_response = str::replace(PARTIAL_UNORDERED, "%s", t_case.0);
+        let other_response = str::replace(SIMPLE_FRAME, "%s", t_case.1);
+        let expected_response = str::replace(SIMPLE_FRAME, "%s", t_case.2);
+
+        let mut frame: Response = serde_json::from_str(&self_response).unwrap();
+        let mut other_frame: Response = serde_json::from_str(&other_response).unwrap();
+        let expected_frame: Response = serde_json::from_str(&expected_response).unwrap();
+
+        frame.apply_validation(&mut other_frame).unwrap();
+
+        // we are matching against what other_frame should look like
+        // even it if is not a _full_ match against our initial frame
+        pretty_assertions::assert_eq!(other_frame, expected_frame);
     }
 }
