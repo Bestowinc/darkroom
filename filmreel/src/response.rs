@@ -607,10 +607,6 @@ mod tests {
     "#;
 
     fn partial_unordered_case(case: u32) -> (&'static str, &'static str, &'static str) {
-        let string_arr = r#"["A","B","C"]"#;
-        let with_f32 = r#"["A","B","C",13.37]"#;
-        let with_dupes = r#"["A","B","C","A","A"]"#;
-
         match case {
             1 => (
                 r#"{"A":true,"B":true,"C":true}"#,
@@ -641,28 +637,32 @@ mod tests {
             7 => (
                 r#"["A","B","C"]"#,
                 r#"["other_value",false,"A","B","C"]"#,
-                string_arr,
+                r#"["A","B","C"]"#,
             ),
             8 => (
                 r#"["A","B","C"]"#,
                 r#"[false,false,"A","B","C"]"#,
-                string_arr,
+                r#"["A","B","C"]"#,
             ),
             9 => (
                 r#"[0,"A",0,"C"]"#,
                 r#"["B","B","A","C","C","A"]"#,
                 r#"["A","C","B","B","A","C"]"#,
             ),
-            10 => (r#"["A","B","C"]"#, r#"["B","A","D","C"]"#, string_arr),
+            10 => (
+                r#"["A","B","C"]"#,
+                r#"["B","A","D","C"]"#,
+                r#"["A","B","C"]"#,
+            ),
             11 => (
                 r#"["A","B","C",13.37]"#,
                 r#"["C", 13.37, "B", "A"]"#,
-                with_f32,
+                r#"["A","B","C",13.37]"#,
             ),
             12 => (
                 r#"["A","B","C","A","A"]"#,
                 r#"["A","C","A","B","A"]"#,
-                with_dupes,
+                r#"["A","B","C","A","A"]"#,
             ),
             _ => panic!(),
         }
