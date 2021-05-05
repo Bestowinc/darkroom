@@ -104,27 +104,19 @@ impl<'a> Response<'a> {
             }
 
             let selector = new_mut_selector(strip_query(k))?;
-            match (v.partial, v.unordered) {
-                (false, false) => {
-                    unreachable!();
-                }
-                (true, false) => {
-                    v.apply_partial(
-                        selector,
-                        self.body.as_mut().unwrap(), // T as Option<&mut Value>.unwrap()
-                        other.body.as_mut().unwrap(),
-                    )?;
-                }
-                (false, true) => {
-                    v.apply_unordered(
-                        selector,
-                        self.body.as_mut().unwrap(),
-                        other.body.as_mut().unwrap(),
-                    )?;
-                }
-                (true, true) => {
-                    unimplemented!();
-                }
+            if v.unordered {
+                v.apply_unordered(
+                    &selector,
+                    self.body.as_mut().unwrap(),
+                    other.body.as_mut().unwrap(),
+                )?;
+            }
+            if v.partial {
+                v.apply_partial(
+                    &selector,
+                    self.body.as_mut().unwrap(),
+                    other.body.as_mut().unwrap(),
+                )?;
             }
         }
 
@@ -188,7 +180,7 @@ impl Validator {
     // partial validation?
     fn apply_partial(
         &self,
-        selector: MutSelector,
+        selector: &MutSelector,
         self_body: &mut Value,
         other_body: &mut Value,
     ) -> Result<(), FrError> {
@@ -352,7 +344,7 @@ impl Validator {
     // ----------------
     fn apply_unordered(
         &self,
-        selector: MutSelector,
+        selector: &MutSelector,
         self_body: &mut Value,
         other_body: &mut Value,
     ) -> Result<(), FrError> {
