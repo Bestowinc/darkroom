@@ -266,42 +266,6 @@ impl Validator {
         }
         Ok(())
     }
-    // What if dupes in self
-    // Self:  [            A, A, B, C]
-    // for i=0, Self[0] is found: in Other[0]
-    // Other: [A, B, B, C, A, B, C]
-    // then Search range [1:] for A
-    // then Search range [6:] for B
-    // then Search range [7:] for C
-    // Self:  [            A, A, B, C]
-    // unordered then partial
-    // Other: [A, B, B, C, A, B, C]
-    // Intersections: [0, 4, 5, 6]
-    // Other: [A, A, B, C, B, B, C]
-    // partial:
-    // Other: [A, B, B, C]
-
-    // What if dupes in self
-    // Self:  [            A, C, A, B, C]
-    // for i=0, Self[0] is found: in Other[0]
-    // Other: [C, A, B, B, A, B, C]
-    // then Search range [2:] for A
-    // then Search range [4:] for C
-    // then Search range [6:] for B
-    // then Search range [7:] for C
-    // Initial Map to be:
-    // Self of [0] <HashOf<A>, mut 1>
-    // Self of [1] <HashOf<B>, mut 2>
-    // Self of [2] <HashOf<C>, mut 0>
-    // Self:  [            A, C, A, B, C]
-    // Other: [C, A, B, B, A, B, C]
-    //
-    // HashMap<key: HashMap<A>,key: Vec<usize>>
-    // Self[0] <HashOf<A>, Vec<0,4> // now lookup for A is [:]    => [0+1:]
-    // Self[1] <HashOf<C>, Vec<0,6> // now lookup for C is [:]    => [1+1:]
-    // Self[3] <HashOf<B>, Vec<2,3,5> // now lookup for B is [:]    => [2+1:]
-    //
-    // Self of [2] <HashOf<A>, mut 4> meaning next A will be in range [4+1:]
 
     fn apply_unordered(
         &self,
@@ -332,29 +296,32 @@ impl Validator {
                     })
                     .collect::<Result<HashMap<Key<_>, Vec<usize>>, _>>()?;
 
-                // remove from other_selection starting with the last index of other
-                // and inserting it into the index of where it is found in self
-                // ----------------
-                // Self:  [A, B, C, C]
-                // Other: [B, A, C, C]
-                // Sink = []
-                //
-                // OtherIdxMap = {B: [0], A: [1]:, C: [2, 3]}
-                // Expected intersections/inter sorted by index of Other:
-                // Self[2] == Other[2]; (2,2)
-                // Self[0] == Other[1]; (0,1)
-                // Self[1] == Other[0]; (1,0)
-                //
-                // Expected iterations:
-                // i=0 v=A:
-                // OtherIdxMap[A].remove(0)->1;Null->Other[1]->Sink[0];Sink==[A      ];Other==[B,   Null,C   ];OtherIdxMap{B:[0],C:[2,3]}
-                // i=1v=B:
-                // OtherIdxMap[B].remove(0)->0;Null->Other[0]->Sink[1];Sink==[A,B    ];Other==[Null,Null,C   ];OtherIdxMap{C:[2,3]      }
-                // i=2v=C:
-                // OtherIdxMap[C].remove(0)->2;Null->Other[2]->Sink[2];Sink==[A,B,C  ];Other==[Null,Null,Null];OtherIdxMap{C:[3]        }
-                // i=3v=C:
-                // OtherIdxMap[C].remove(0)->3;Null->Other[3]->Sink[3];Sink==[A,B,C,C];Other==[Null,Null,Null];OtherIdxMap{             }
-                // ----------------
+                /*
+                remove from other_selection starting with the last index of other
+                and insert into the index of where it is found in self
+                ----------------
+                Self:  [A, B, C, C]
+                Other: [B, A, C, C]
+                Sink = []
+
+                OtherIdxMap = {B: [0], A: [1]:, C: [2, 3]}
+                Expected intersections/inter sorted by index of Other:
+                Self[2] == Other[2]; (2,2)
+                Self[0] == Other[1]; (0,1)
+                Self[1] == Other[0]; (1,0)
+
+                Expected iterations:
+                i=0 v=A:
+                OtherIdxMap[A].remove(0)->1;Null->Other[1]->Sink[0];Sink==[A      ];Other==[B,   Null,C   ];OtherIdxMap{B:[0],C:[2,3]}
+                i=1v=B:
+                OtherIdxMap[B].remove(0)->0;Null->Other[0]->Sink[1];Sink==[A,B    ];Other==[Null,Null,C   ];OtherIdxMap{C:[2,3]      }
+                i=2v=C:
+                OtherIdxMap[C].remove(0)->2;Null->Other[2]->Sink[2];Sink==[A,B,C  ];Other==[Null,Null,Null];OtherIdxMap{C:[3]        }
+                i=3v=C:
+                OtherIdxMap[C].remove(0)->3;Null->Other[3]->Sink[3];Sink==[A,B,C,C];Other==[Null,Null,Null];OtherIdxMap{             }
+                ----------------
+                */
+
                 // retain list of all Other indices that have been swapped
                 // with placeholder elements
                 let mut filter_indices: HashSet<usize> = HashSet::new();
