@@ -1,13 +1,19 @@
 use crate::utils::Rule;
 use colored::*;
 use pest::error::Error as PestError;
+use serde_hashkey::Error as HashKeyError;
 use serde_json::error::{Category, Error as SerdeError};
-use std::{error::Error, fmt};
+use std::{error, fmt};
+
+pub type FrError<T> = FilmreelError<T>;
 
 /// An error that occurred during parsing or hydrating a filmReel file
 #[derive(Debug, PartialEq)]
 #[non_exhaustive]
-pub enum FrError {
+pub enum FilmreelError<T>
+where
+    T: error::Error,
+{
     FrameParse(&'static str),
     FrameParsef(&'static str, String),
     ReelParsef(&'static str, String),
@@ -15,12 +21,11 @@ pub enum FrError {
     WriteInstruction(&'static str),
     ReadInstructionf(&'static str, String),
     ReelParse(&'static str),
-    Serde(String),
     Parse(String),
-    Pest(PestError<Rule>),
+    Error(T),
 }
 
-impl Error for FrError {
+impl<T> error::Error for FilmreelError<T> {
     fn description(&self) -> &str {
         "Error related to filmReel"
     }
@@ -35,50 +40,60 @@ macro_rules! errorf {
     };
 }
 
-impl From<SerdeError> for FrError {
-    fn from(err: SerdeError) -> FrError {
+impl<T> From<T> for FilmreelError<T>
+where
+    T: error::Error,
+{
+    fn from(err: T) -> FilmreelError<T> {
+        Self(err)
+    }
+}
+
+impl<T> From<SerdeError> for FilmreelError<T> {
+    fn from(err: SerdeError) -> FilmreelError<T> {
         match err.classify() {
             Category::Io => unreachable!(),
-            Category::Syntax | Category::Data | Category::Eof => FrError::Serde(err.to_string()),
+            Category::Syntax | Category::Data | Category::Eof => {
+                FilmreelError::Serde(err.to_string())
+            }
         }
     }
 }
 
-impl From<PestError<Rule>> for FrError {
-    fn from(err: PestError<Rule>) -> FrError {
+impl<T> From<PestError<Rule>> for FilmreelError<T> {
+    fn from(err: PestError<Rule>) -> FilmreelError<T> {
         Self::Pest(err)
     }
 }
 
-impl fmt::Display for FrError {
+impl<T> fmt::Display for FilmreelError<T>
+where
+    T: error::Error,
+{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            FrError::FrameParse(msg) => write!(f, "FrameParseError: {}", msg),
-            FrError::ReelParse(msg) => write!(f, "ReelParseError: {}", msg),
-            FrError::WriteInstruction(msg) => write!(f, "WriteInstructionError: {}", msg),
-            FrError::ReadInstruction(msg) => write!(f, "ReadInstructionError: {}", msg),
-            FrError::FrameParsef(msg, item) => {
+            FilmreelError::FrameParse(msg) => write!(f, "FrameParseError: {}", msg),
+            FilmreelError::ReelParse(msg) => write!(f, "ReelParseError: {}", msg),
+            FilmreelError::WriteInstruction(msg) => write!(f, "WriteInstructionError: {}", msg),
+            FilmreelError::ReadInstruction(msg) => write!(f, "ReadInstructionError: {}", msg),
+            FilmreelError::FrameParsef(msg, item) => {
                 errorf!(f, "FrameParseError", msg, item);
                 Ok(())
             }
-            FrError::ReelParsef(msg, item) => {
+            FilmreelError::ReelParsef(msg, item) => {
                 errorf!(f, "ReelParseError", msg, item);
                 Ok(())
             }
-            FrError::ReadInstructionf(msg, item) => {
+            FilmreelError::ReadInstructionf(msg, item) => {
                 errorf!(f, "ReadInstructionError", msg, item);
                 Ok(())
             }
-            FrError::Serde(msg) => {
-                writeln!(f, "SerdeError {} {}", "-->".red(), msg)?;
-                Ok(())
-            }
-            FrError::Parse(msg) => {
+            FilmreelError::Parse(msg) => {
                 writeln!(f, "ParseError {} {}", "-->".red(), msg)?;
                 Ok(())
             }
-            FrError::Pest(msg) => {
-                writeln!(f, "PestError {} {}", "-->".red(), msg)?;
+            FilmreelError::Error(msg) => {
+                writeln!(f, "Error {} {}", "-->".red(), msg)?;
                 Ok(())
             }
         }

@@ -390,9 +390,9 @@ impl Validator {
                 for (to_idx, v) in self_selection.iter().enumerate() {
                     let v_hash = to_key(v).map_err(|e| FrError::Parse(e.to_string()))?;
 
-                    if let Some(other_hash_idxs) = other_keys.get_mut(&v_hash) {
+                    if let Some(other_idxs) = other_keys.get_mut(&v_hash) {
                         // remove idx from Vec so that it is not reused
-                        let from_idx = other_hash_idxs.remove(0);
+                        let from_idx = other_idxs.remove(0);
                         // Swap places with the Value::Null in the match_sink so that values in
                         // Other maintain a valid index reference
                         std::mem::swap(&mut match_sink[to_idx], &mut other_selection[from_idx]);
@@ -408,6 +408,7 @@ impl Validator {
                 // retain other_selection elements where index is no in filter_keys
                 let mut i = 0;
                 other_selection.retain(|_| (!filter_keys.contains(&i), i += 1).0);
+                // https://stackoverflow.com/questions/47037573/how-to-prepend-a-slice-to-a-vec#answer-47037876
                 other_selection.splice(0..0, match_sink.into_iter());
 
                 Ok(())
@@ -570,7 +571,7 @@ mod tests {
     }
 
     fn unordered_case(case: u32) -> (&'static str, &'static str, bool) {
-        let frame_obj_response = r#"
+        let map_arr = r#"
 {
   "validation": {
     "'response'.'body'": {
@@ -585,7 +586,7 @@ mod tests {
   "status": 200
 }
     "#;
-        let frame_arr_response = r#"
+        let string_arr = r#"
 {
   "validation": {
     "'response'.'body'": {
@@ -600,7 +601,23 @@ mod tests {
   "status": 200
 }
     "#;
-        let frame_arr_with_f32 = r#"
+        let with_f32 = r#"
+{
+  "validation": {
+    "'response'.'body'": {
+      "unordered": true
+    }
+  },
+  "body": [
+    "A",
+    "B",
+    "C",
+    13.37
+  ],
+  "status": 200
+}
+            "#;
+        let arr_with_unsorted_dupes = r#"
 {
   "validation": {
     "'response'.'body'": {
@@ -619,62 +636,54 @@ mod tests {
 
         match case {
             1 => (
-                frame_obj_response,
+                map_arr,
                 r#"{"body":{"A":true,"B":true,"C":true},"status":200}"#,
                 true,
             ),
             2 => (
-                frame_obj_response,
+                map_arr,
                 r#"{"body":{"A":true,"B":false,"C":true},"status":200}"#,
                 false,
             ),
             3 => (
-                frame_obj_response,
+                map_arr,
                 r#"{"body":{"A":true,"B":true,"C":true,"D":true},"status":200}"#,
                 false,
             ),
             4 => (
-                frame_obj_response,
+                map_arr,
                 r#"{"body":{"A":true,"B":true},"status":200}"#,
                 false,
             ),
             5 => (
-                frame_obj_response,
+                map_arr,
                 r#"{"body":{"B":true,"C":true,"A":true},"status":200}"#,
                 true,
             ),
-            6 => (
-                frame_arr_response,
-                r#"{"body":["A","B","C"],"status":200}"#,
-                true,
-            ),
+            6 => (string_arr, r#"{"body":["A","B","C"],"status":200}"#, true),
             7 => (
-                frame_arr_response,
+                string_arr,
                 r#"{"body":["other_value",false,"A","B","C"],"status":200}"#,
                 false,
             ),
             8 => (
-                frame_arr_response,
+                string_arr,
                 r#"{"body":[false,false,"A","B","C"],"status":200}"#,
                 false,
             ),
-            9 => (
-                frame_arr_response,
-                r#"{"body":["B","A","C"],"status":200}"#,
-                true,
-            ),
+            9 => (string_arr, r#"{"body":["B","A","C"],"status":200}"#, true),
             10 => (
-                frame_arr_response,
+                string_arr,
                 r#"{"body":["B","A","D","C"],"status":200}"#,
                 false,
             ),
             11 => (
-                frame_arr_with_f32,
+                with_f32,
                 r#"{"body":["C", 13.37, "B", "A"],"status": 200}"#,
                 true,
             ),
             12 => (
-                frame_arr_response,
+                string_arr,
                 r#"{"body":["A", "C", 13.37, "B", "A"],"status": 200}"#,
                 true,
             ),
