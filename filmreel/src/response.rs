@@ -303,45 +303,6 @@ impl Validator {
     //
     // Self of [2] <HashOf<A>, mut 4> meaning next A will be in range [4+1:]
 
-    // remove from other_selection starting with the last index of other
-    // and inserting it into the index of where it is found in self
-    // ----------------
-    // Self:  [A, B, C]
-    // Other: [B, A, C]
-    //
-    // other_keys = {B: [0], A: [1]:, C: [2]}
-    // Expected intersections/inter sorted by index of Other:
-    // Self[2] == Other[2]; (2,2)
-    // Self[0] == Other[1]; (0,1)
-    // Self[1] == Other[0]; (1,0)
-    //
-    // Sink = [Null, Null, Null]
-    // Expected iterations:
-    // i=0 v=A:
-    // other_keys[A].remove(0) -> 1; swap Sink[0] <-> Other[1] <- C
-    // Sink == [Null, Null, C]
-    // i=0 v=1:
-    // Other.remove(1) -> A; Other == [B    ]; Sink[0] <- C; Sink == [A,    Null, C]
-    // i=1 v=0:
-    // Other.remove(0) -> B; Other == [     ]; Sink[1] <- C; Sink == [A, B, C      ]
-    //
-    // ----------------
-    // Self:  [A, B, C]
-    // Other: [other_value, false, A, B, C]
-    //
-    // Expected intersections/inter sorted by index of Other:
-    // Self[2] == Other[4]; (2,4)
-    // Self[1] == Other[3]; (1,3)
-    // Self[0] == Other[2]; (0,2)
-    //
-    // Expected iterations:
-    // i= 2 v=4:
-    // Other.remove(4) -> C; Other == [other_value, false, A, B]; inter[2] <- C; intersection == [Null, Null, C]
-    // i= 1 v=3:
-    // Other.remove(3) -> B; Other == [other_value, false, A   ]; inter[1] <- B; intersection == [A,    Null, C]
-    // i= 0 v=2:
-    // Other.remove(2) -> A; Other == [other_value, false      ]; inter[0] <- A; intersection == [A, B, C      ]
-    // ----------------
     fn apply_unordered(
         &self,
         selector: &MutSelector,
@@ -359,7 +320,7 @@ impl Validator {
                     _ => return Ok(()),
                 };
                 // https://gist.github.com/daboross/976978d8200caf86e02acb6805961195
-                let mut other_keys: HashMap<Key<_>, Vec<usize>> = other_selection
+                let mut other_idx_map: HashMap<Key<_>, Vec<usize>> = other_selection
                     .iter()
                     .enumerate()
                     // (i: usize, v: &Value)
@@ -371,16 +332,39 @@ impl Validator {
                     })
                     .collect::<Result<HashMap<Key<_>, Vec<usize>>, _>>()?;
 
+                // remove from other_selection starting with the last index of other
+                // and inserting it into the index of where it is found in self
+                // ----------------
+                // Self:  [A, B, C, C]
+                // Other: [B, A, C, C]
+                // Sink = []
+                //
+                // OtherIdxMap = {B: [0], A: [1]:, C: [2, 3]}
+                // Expected intersections/inter sorted by index of Other:
+                // Self[2] == Other[2]; (2,2)
+                // Self[0] == Other[1]; (0,1)
+                // Self[1] == Other[0]; (1,0)
+                //
+                // Expected iterations:
+                // i=0 v=A:
+                // OtherIdxMap[A].remove(0)->1;Null->Other[1]->Sink[0];Sink==[A      ];Other==[B,   Null,C   ];OtherIdxMap{B:[0],C:[2,3]}
+                // i=1v=B:
+                // OtherIdxMap[B].remove(0)->0;Null->Other[0]->Sink[1];Sink==[A,B    ];Other==[Null,Null,C   ];OtherIdxMap{C:[2,3]      }
+                // i=2v=C:
+                // OtherIdxMap[C].remove(0)->2;Null->Other[2]->Sink[2];Sink==[A,B,C  ];Other==[Null,Null,Null];OtherIdxMap{C:[3]        }
+                // i=3v=C:
+                // OtherIdxMap[C].remove(0)->3;Null->Other[3]->Sink[3];Sink==[A,B,C,C];Other==[Null,Null,Null];OtherIdxMap{             }
+                // ----------------
                 // retain list of all Other indices that have been swapped
                 // with placeholder elements
-                let mut filter_idxs: HashSet<usize> = HashSet::new();
+                let mut filter_indices: HashSet<usize> = HashSet::new();
                 let mut match_sink: BTreeMap<usize, Value> = BTreeMap::new();
                 for (to_idx, v) in self_selection.iter().enumerate() {
                     let v_hash = to_key(v)?;
 
-                    if let Some(other_idxs) = other_keys.get_mut(&v_hash) {
+                    if let Some(other_indices) = other_idx_map.get_mut(&v_hash) {
                         // remove idx from Vec so that it is not reused
-                        let from_idx = other_idxs.remove(0);
+                        let from_idx = other_indices.remove(0);
                         // retain reference of key to be removed so we can swap it
                         // with a Null when doing substitution
                         let mut to_value = Value::Null;
@@ -389,19 +373,18 @@ impl Validator {
                         std::mem::swap(&mut to_value, &mut other_selection[from_idx]);
                         match_sink.insert(to_idx, to_value);
                         // make sure to remove the Null after iteration
-                        filter_idxs.insert(from_idx);
+                        filter_indices.insert(from_idx);
                     }
                 }
 
-                // we've found no intersections
-                // return early
+                // we've found no intersections; return early
                 if match_sink.is_empty() {
                     return Ok(());
                 }
 
                 // retain other_selection elements where index is no in filter_keys
                 let mut i = 0;
-                other_selection.retain(|_| (!filter_idxs.contains(&i), i += 1).0);
+                other_selection.retain(|_| (!filter_indices.contains(&i), i += 1).0);
                 // https://stackoverflow.com/questions/47037573/how-to-prepend-a-slice-to-a-vec#answer-47037876
                 other_selection.splice(0..0, match_sink.into_iter().map(|(_, v)| v));
 
