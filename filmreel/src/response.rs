@@ -375,6 +375,7 @@ fn hash_value(value: &Value) -> Result<Key<Hash>, HashError> {
     if let Value::Object(obj_map) = value {
         let null_map: Map<String, Value> =
             obj_map.keys().map(|k| (k.clone(), Value::Null)).collect();
+
         return to_key(&null_map);
     }
     to_key(value)
@@ -632,9 +633,16 @@ mod tests {
                 r#"["A","B","C","A","A"]"#,
             ),
             13 => (
-                r#"[0,{"A":false},1]"#,
-                r#"[1,{"A":true},0]"#,
-                r#"[0,{"A":true},1]"#,
+                // test hash_value
+                r#"[0,{"A":1},1]"#,
+                r#"[1,{"A":0},0]"#,
+                r#"[0,{"A":1},1]"#,
+            ),
+            14 => (
+                // test hash_value
+                r#"[0,{"A":false,"B":true},1]"#,
+                r#"[1,{"B":true},0]"#,
+                r#"[0,1,{"B":true}]"#,
             ),
             _ => panic!(),
         }
@@ -654,7 +662,8 @@ mod tests {
         case(partial_unordered_case(10)),
         case(partial_unordered_case(11)),
         case(partial_unordered_case(12)),
-        case(partial_unordered_case(13))
+        case(partial_unordered_case(13)),
+        case(partial_unordered_case(14))
     )]
     fn test_partial_unordered_validation(t_case: (&str, &str, &str)) {
         let self_response = str::replace(PARTIAL_UNORDERED, "%s", t_case.0);
