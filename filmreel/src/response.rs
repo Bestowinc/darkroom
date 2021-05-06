@@ -5,8 +5,10 @@ use crate::{
     utils::{new_mut_selector, select_value, MutSelector},
 };
 use serde::{Deserialize, Serialize};
-use serde_hashkey::{to_key_with_ordered_float as to_key, Key};
-use serde_json::{json, to_value, Value};
+use serde_hashkey::{
+    to_key_with_ordered_float as to_key, Error as HashError, Key, OrderedFloatPolicy as Hash,
+};
+use serde_json::{json, to_value, Map, Value};
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 const INVALID_INSTRUCTION_TYPE_ERR: &str =
@@ -284,22 +286,20 @@ impl Validator {
                     _ => return Ok(()),
                 };
                 // https://gist.github.com/daboross/976978d8200caf86e02acb6805961195
-                let mut other_idx_map: HashMap<Key<_>, Vec<usize>> = other_selection
+                let mut other_idx_map: HashMap<Key<Hash>, Vec<usize>> = HashMap::new();
+                other_selection
                     .iter()
                     .enumerate()
-                    // (i: usize, v: &Value)
-                    .map(|(i, v)| match to_key(v) {
-                    // TODO hash objects as all the keys with an empty value:
-                    // [{"this":"that"}, false] ~= [false, {"this":"false"}]
-                    //
-                    // {"this":"that"} should be hashed as {"this":{}}
-                    // {"this":false } should be hashed as {"this":{}}
+                    .map(|(i, v)| match hash_value(v) {
                         Ok(k) => {
-                            Ok((k, vec![i]))
+                            // if .entry(k) returns a Vec, push i to it
+                            // if .entry(k) returns None, insert Vec::new() then push i to it
+                            other_idx_map.entry(k).or_insert(Vec::new()).push(i);
+                            Ok(())
                         }
                         Err(e) => Err(e),
                     })
-                    .collect::<Result<HashMap<Key<_>, Vec<usize>>, _>>()?;
+                    .collect::<Result<(), HashError>>()?;
 
                 /*
                 remove from other_selection starting with the last index of other
@@ -307,7 +307,7 @@ impl Validator {
                 ----------------
                 Self:  [A, B, C, C]
                 Other: [B, A, C, C]
-                Sink = []
+                Sink:  []
                 OtherIdxMap = {B: [0], A: [1]:, C: [2, 3]}
 
                 Expected iterations:
@@ -328,7 +328,7 @@ impl Validator {
                 let mut placeholder_indices: HashSet<usize> = HashSet::new();
                 let mut sink: BTreeMap<usize, Value> = BTreeMap::new();
                 for (to_idx, v) in self_selection.iter().enumerate() {
-                    let v_hash = to_key(v)?;
+                    let v_hash = hash_value(v)?;
 
                     if let Some(other_indices) = other_idx_map.get_mut(&v_hash) {
                         // remove idx from Vec so that it is not reused
@@ -363,6 +363,21 @@ impl Validator {
             )),
         }
     }
+}
+
+// hash_value hashes Value::Object variants using only the key elements
+// thus partial equality can be done for the sake of ordering:
+// [{"this":"that"}, false] ~= [false, {"this":"false"}]
+// ---
+// {"this":"that"} will be hashed as {"this":null}
+// {"this":false } will be hashed as {"this":null}
+fn hash_value(value: &Value) -> Result<Key<Hash>, HashError> {
+    if let Value::Object(obj_map) = value {
+        let null_map: Map<String, Value> =
+            obj_map.keys().map(|k| (k.clone(), Value::Null)).collect();
+        return to_key(&null_map);
+    }
+    to_key(value)
 }
 
 #[cfg(test)]
@@ -508,8 +523,8 @@ mod tests {
             8 => (string_arr, r#"[false,false,"A","B","C"]"#, false),
             9 => (string_arr, r#"["B","A","C"]"#, true),
             10 => (string_arr, r#"["B","A","D","C"]"#, false),
-            11 => (with_f32, r#"["C", 13.37, "B", "A"]"#, true),
-            12 => (with_dupes, r#"["A", "C", "A", "B", "A"]"#, true),
+            11 => (with_f32, r#"["C",13.37,"B","A"]"#, true),
+            12 => (with_dupes, r#"["A","C","A","B","A"]"#, true),
             _ => panic!(),
         }
     }
@@ -526,7 +541,8 @@ mod tests {
         case(unordered_case(8)),
         case(unordered_case(9)),
         case(unordered_case(10)),
-        case(unordered_case(11))
+        case(unordered_case(11)),
+        case(unordered_case(12))
     )]
     fn test_unordered_validation(t_case: (&str, &str, bool)) {
         let self_response = str::replace(UNORDERED_FRAME, "%s", t_case.0);
@@ -567,7 +583,7 @@ mod tests {
             2 => (
                 r#"{"A":true,"B":[1,0],"C":true}"#,
                 r#"{"A":true,"C":true,"B":[0,1]}"#,
-                r#"{"A":true,"B":[1,0],"C":true}"#,
+                r#"{"A":true,"B":[0,1],"C":true}"#,
             ),
             3 => (
                 r#"{"A":true,"B":true,"C":true}"#,
@@ -598,7 +614,7 @@ mod tests {
             9 => (
                 r#"[0,"A",0,"C"]"#,
                 r#"["B","B","A","C","C","A"]"#,
-                r#"["A","C","B","B","A","C"]"#,
+                r#"["A","C","B","B","C","A"]"#,
             ),
             10 => (
                 r#"["A","B","C"]"#,
@@ -614,6 +630,11 @@ mod tests {
                 r#"["A","B","C","A","A"]"#,
                 r#"["A","C","A","B","A"]"#,
                 r#"["A","B","C","A","A"]"#,
+            ),
+            13 => (
+                r#"[0,{"A":false},1]"#,
+                r#"[1,{"A":true},0]"#,
+                r#"[0,{"A":true},1]"#,
             ),
             _ => panic!(),
         }
@@ -631,7 +652,9 @@ mod tests {
         case(partial_unordered_case(8)),
         case(partial_unordered_case(9)),
         case(partial_unordered_case(10)),
-        case(partial_unordered_case(11))
+        case(partial_unordered_case(11)),
+        case(partial_unordered_case(12)),
+        case(partial_unordered_case(13))
     )]
     fn test_partial_unordered_validation(t_case: (&str, &str, &str)) {
         let self_response = str::replace(PARTIAL_UNORDERED, "%s", t_case.0);
