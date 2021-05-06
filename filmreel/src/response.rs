@@ -305,10 +305,11 @@ impl Validator {
                 // placeholder_indices so that Other can be later drained
                 // of the appropriate Value::Null elements using `other_selection.retain(...);`
                 let mut placeholder_indices: HashSet<usize> = HashSet::new();
-                // sink collects successful matches of elements in other
-                // in the sequence they are present in self
-                // then prepends the collection matches to other_selection
-                // thus all successful matches are found at the front of the vec
+                // sink collects successful matches of elements from Other
+                // in the sequence (aka ordered but non-consecutive) they are present in Self
+                // sink is then prepended to other_selection
+                // thus all successful matches (those that are found in both Self and Other)
+                // will found at the front of other_selection in sequence
                 let mut sink: BTreeMap<usize, Value> = BTreeMap::new();
                 /*
                 remove from other_selection starting with the last index of other
@@ -637,12 +638,13 @@ mod tests {
             ),
             13 => (
                 // test hash_value
-                r#"[0,{"A":1},1]"#,
-                r#"[1,{"A":0},0]"#,
-                r#"[0,{"A":1},1]"#,
+                r#"[0,{"A":1},1,4,5]"#,
+                r#"[1,{"A":0},0,2,3]"#,
+                r#"[0,{"A":0},1,2,3]"#,
             ),
             14 => (
-                // test hash_value
+                // test hash_value, mutliple keys should not
+                // have a matching hash of a single key
                 r#"[0,{"A":false,"B":true},1]"#,
                 r#"[1,{"B":true},0]"#,
                 r#"[0,1,{"B":true}]"#,
