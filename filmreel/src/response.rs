@@ -318,17 +318,18 @@ impl Validator {
                 Self:  [A, B, C, C]
                 Other: [B, A, C, C]
                 Sink:  []
-                OtherIdxMap = {B: [0], A: [1]:, C: [2, 3]}
+                OtherIdxMap/IdxMap: {B: [0], A: [1]:, C: [2, 3]}
 
                 Expected iterations:
+                                                                    Sink[       ];Other[B,   A,   C   ,C   ];IdxMap{B:[0],A:[1]C:[2,3]}
                 i=0 v=A:
-                OtherIdxMap[A].remove(0)->1;Null->Other[1]->Sink[0];Sink==[A      ];Other==[B,   Null,C   ];OtherIdxMap{B:[0],C:[2,3]}
+                OtherIdxMap[A].remove(0)->1;Null->Other[1]->Sink[0];Sink[A      ];Other[B,   Null,C   ,C   ];IdxMap{B:[0],C:[2,3]     }
                 i=1 v=B:
-                OtherIdxMap[B].remove(0)->0;Null->Other[0]->Sink[1];Sink==[A,B    ];Other==[Null,Null,C   ];OtherIdxMap{C:[2,3]      }
+                OtherIdxMap[B].remove(0)->0;Null->Other[0]->Sink[1];Sink[A,B    ];Other[Null,Null,C   ,C   ];IdxMap{C:[2,3]           }
                 i=2 v=C:
-                OtherIdxMap[C].remove(0)->2;Null->Other[2]->Sink[2];Sink==[A,B,C  ];Other==[Null,Null,Null];OtherIdxMap{C:[3]        }
+                OtherIdxMap[C].remove(0)->2;Null->Other[2]->Sink[2];Sink[A,B,C  ];Other[Null,Null,Null,C   ];IdxMap{C:[3]             }
                 i=3 v=C:
-                OtherIdxMap[C].remove(0)->3;Null->Other[3]->Sink[3];Sink==[A,B,C,C];Other==[Null,Null,Null];OtherIdxMap{             }
+                OtherIdxMap[C].remove(0)->3;Null->Other[3]->Sink[3];Sink[A,B,C,C];Other[Null,Null,Null,Null];IdxMap{                  }
                 ----------------
                 */
                 for (to_idx, v) in self_selection.iter().enumerate() {
