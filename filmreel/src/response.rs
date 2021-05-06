@@ -301,6 +301,15 @@ impl Validator {
                     })
                     .collect::<Result<(), HashError>>()?;
 
+                // elements removed form OtherIdxMap are put in
+                // placeholder_indices so that Other can be later drained
+                // of the appropriate Value::Null elements using `other_selection.retain(...);`
+                let mut placeholder_indices: HashSet<usize> = HashSet::new();
+                // sink collects successful matches of elements in other
+                // in the sequence they are present in self
+                // then prepends the collection matches to other_selection
+                // thus all successful matches are found at the front of the vec
+                let mut sink: BTreeMap<usize, Value> = BTreeMap::new();
                 /*
                 remove from other_selection starting with the last index of other
                 and insert into the index of where it is found in self
@@ -321,12 +330,6 @@ impl Validator {
                 OtherIdxMap[C].remove(0)->3;Null->Other[3]->Sink[3];Sink==[A,B,C,C];Other==[Null,Null,Null];OtherIdxMap{             }
                 ----------------
                 */
-
-                // elements removed form OtherIdxMap are put in
-                // placeholder_indices so that Other can be later drained
-                // of the appropriate Value::Null elements using `other_selection.retain(...);`
-                let mut placeholder_indices: HashSet<usize> = HashSet::new();
-                let mut sink: BTreeMap<usize, Value> = BTreeMap::new();
                 for (to_idx, v) in self_selection.iter().enumerate() {
                     let v_hash = hash_value(v)?;
 
