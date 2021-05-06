@@ -219,8 +219,8 @@ impl Validator {
                     return Ok(());
                 }
 
-                for k in other_keys.iter() {
-                    other_selection.remove(k);
+                for k in other_keys.into_iter() {
+                    other_selection.remove(&k);
                 }
             }
             Value::Array(self_selection) => {
@@ -248,7 +248,7 @@ impl Validator {
                 // NOTE: Array partial matches need to be ordered as well as contiguous.
                 // The example below would not result in a match:
                 // Other: [A, B, B, C, A, B, B, C]
-                for (i, _) in other_selection.clone().iter().enumerate() {
+                for i in (0..other_selection.len()).into_iter() {
                     if i + self_len > other_selection.len() {
                         // other_selection[i..] is already larger than self_selection here
                         // cannot find a partial match at this point
@@ -321,11 +321,11 @@ impl Validator {
                 OtherIdxMap/IdxMap: {B: [0], A: [1]:, C: [2, 3]}
 
                 Expected iterations:
-                                                                    Sink[       ];Other[B,   A,   C   ,C   ];IdxMap{B:[0],A:[1]C:[2,3]}
+                                                                    Sink[       ];Other[B,   A,   C,   C   ];IdxMap{B:[0],A:[1]C:[2,3]}
                 i=0 v=A:
-                OtherIdxMap[A].remove(0)->1;Null->Other[1]->Sink[0];Sink[A      ];Other[B,   Null,C   ,C   ];IdxMap{B:[0],C:[2,3]     }
+                OtherIdxMap[A].remove(0)->1;Null->Other[1]->Sink[0];Sink[A      ];Other[B,   Null,C,   C   ];IdxMap{B:[0],C:[2,3]     }
                 i=1 v=B:
-                OtherIdxMap[B].remove(0)->0;Null->Other[0]->Sink[1];Sink[A,B    ];Other[Null,Null,C   ,C   ];IdxMap{C:[2,3]           }
+                OtherIdxMap[B].remove(0)->0;Null->Other[0]->Sink[1];Sink[A,B    ];Other[Null,Null,C,   C   ];IdxMap{C:[2,3]           }
                 i=2 v=C:
                 OtherIdxMap[C].remove(0)->2;Null->Other[2]->Sink[2];Sink[A,B,C  ];Other[Null,Null,Null,C   ];IdxMap{C:[3]             }
                 i=3 v=C:
@@ -370,12 +370,12 @@ impl Validator {
     }
 }
 
-// hash_value hashes Value::Object variants using only the key elements
-// thus partial equality can be done for the sake of ordering:
-// [{"this":"that"}, false] ~= [false, {"this":"false"}]
-// ---
-// {"this":"that"} will be hashed as {"this":null}
-// {"this":false } will be hashed as {"this":null}
+/// hash_value hashes [Value::Object] variants using only the key elements
+/// thus partial equality can be done for the sake of ordering:
+/// `[{"this":false}, false] ~= [false, {"this":true}]`
+/// ---
+/// `{"this":true}` will be hashed as `{"this":null}`
+/// `{"this":false }` will be hashed as `{"this":null}`
 fn hash_value(value: &Value) -> Result<Key<Hash>, HashError> {
     if let Value::Object(obj_map) = value {
         let null_map: Map<String, Value> =
