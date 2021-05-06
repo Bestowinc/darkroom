@@ -290,16 +290,15 @@ impl Validator {
                 other_selection
                     .iter()
                     .enumerate()
-                    .map(|(i, v)| match hash_value(v) {
+                    .try_for_each(|(i, v)| match hash_value(v) {
                         Ok(k) => {
                             // if .entry(k) returns a Vec, push i to it
                             // if .entry(k) returns None, insert Vec::new() then push i to it
-                            other_idx_map.entry(k).or_insert(Vec::new()).push(i);
+                            other_idx_map.entry(k).or_insert_with(Vec::new).push(i);
                             Ok(())
                         }
                         Err(e) => Err(e),
-                    })
-                    .collect::<Result<(), HashError>>()?;
+                    })?;
 
                 // elements removed form OtherIdxMap are put in
                 // placeholder_indices so that Other can be later drained
