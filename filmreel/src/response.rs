@@ -289,6 +289,11 @@ impl Validator {
                     .enumerate()
                     // (i: usize, v: &Value)
                     .map(|(i, v)| match to_key(v) {
+                    // TODO hash objects as all the keys with an empty value:
+                    // [{"this":"that"}, false] ~= [false, {"this":"false"}]
+                    //
+                    // {"this":"that"} should be hashed as {"this":{}}
+                    // {"this":false } should be hashed as {"this":{}}
                         Ok(k) => {
                             Ok((k, vec![i]))
                         }
@@ -310,17 +315,18 @@ impl Validator {
                 OtherIdxMap[A].remove(0)->1;Null->Other[1]->Sink[0];Sink==[A      ];Other==[B,   Null,C   ];OtherIdxMap{B:[0],C:[2,3]}
                 i=1 v=B:
                 OtherIdxMap[B].remove(0)->0;Null->Other[0]->Sink[1];Sink==[A,B    ];Other==[Null,Null,C   ];OtherIdxMap{C:[2,3]      }
-                i=2v=C:
+                i=2 v=C:
                 OtherIdxMap[C].remove(0)->2;Null->Other[2]->Sink[2];Sink==[A,B,C  ];Other==[Null,Null,Null];OtherIdxMap{C:[3]        }
-                i=3v=C:
+                i=3 v=C:
                 OtherIdxMap[C].remove(0)->3;Null->Other[3]->Sink[3];Sink==[A,B,C,C];Other==[Null,Null,Null];OtherIdxMap{             }
                 ----------------
                 */
 
-                // retain list of all Other indices that have been swapped
-                // with placeholder elements
-                let mut filter_indices: HashSet<usize> = HashSet::new();
-                let mut match_sink: BTreeMap<usize, Value> = BTreeMap::new();
+                // elements removed form OtherIdxMap are put in
+                // placeholder_indices so that Other can be later drained
+                // of the appropriate Value::Null elements using `other_selection.retain(...);`
+                let mut placeholder_indices: HashSet<usize> = HashSet::new();
+                let mut sink: BTreeMap<usize, Value> = BTreeMap::new();
                 for (to_idx, v) in self_selection.iter().enumerate() {
                     let v_hash = to_key(v)?;
 
@@ -333,22 +339,22 @@ impl Validator {
                         // swap places with the Null in the match_sink so that values in
                         // Other maintain a valid index reference
                         std::mem::swap(&mut to_value, &mut other_selection[from_idx]);
-                        match_sink.insert(to_idx, to_value);
+                        sink.insert(to_idx, to_value);
                         // make sure to remove the Null after iteration
-                        filter_indices.insert(from_idx);
+                        placeholder_indices.insert(from_idx);
                     }
                 }
 
                 // we've found no intersections; return early
-                if match_sink.is_empty() {
+                if sink.is_empty() {
                     return Ok(());
                 }
 
-                // retain other_selection elements where index is no in filter_keys
+                // retain other_selection elements where index is not in placeholder_indices
                 let mut i = 0;
-                other_selection.retain(|_| (!filter_indices.contains(&i), i += 1).0);
+                other_selection.retain(|_| (!placeholder_indices.contains(&i), i += 1).0);
                 // https://stackoverflow.com/questions/47037573/how-to-prepend-a-slice-to-a-vec#answer-47037876
-                other_selection.splice(0..0, match_sink.into_iter().map(|(_, v)| v));
+                other_selection.splice(0..0, sink.into_iter().map(|(_, v)| v));
 
                 Ok(())
             }
@@ -561,7 +567,7 @@ mod tests {
             2 => (
                 r#"{"A":true,"B":[1,0],"C":true}"#,
                 r#"{"A":true,"C":true,"B":[0,1]}"#,
-                r#"{"A":true,"B":[0,1],"C":true}"#,
+                r#"{"A":true,"B":[1,0],"C":true}"#,
             ),
             3 => (
                 r#"{"A":true,"B":true,"C":true}"#,
@@ -581,7 +587,7 @@ mod tests {
             6 => (r#"["A","B","C"]"#, r#"["F","C","C"]"#, r#"["C","F","C"]"#),
             7 => (
                 r#"["A","B","C"]"#,
-                r#"["other_value",false,"A","B","C"]"#,
+                r#"["other_value",false,"B","A","C","B"]"#,
                 r#"["A","B","C"]"#,
             ),
             8 => (
