@@ -303,17 +303,12 @@ impl Validator {
                 Self:  [A, B, C, C]
                 Other: [B, A, C, C]
                 Sink = []
-
                 OtherIdxMap = {B: [0], A: [1]:, C: [2, 3]}
-                Expected intersections/inter sorted by index of Other:
-                Self[2] == Other[2]; (2,2)
-                Self[0] == Other[1]; (0,1)
-                Self[1] == Other[0]; (1,0)
 
                 Expected iterations:
                 i=0 v=A:
                 OtherIdxMap[A].remove(0)->1;Null->Other[1]->Sink[0];Sink==[A      ];Other==[B,   Null,C   ];OtherIdxMap{B:[0],C:[2,3]}
-                i=1v=B:
+                i=1 v=B:
                 OtherIdxMap[B].remove(0)->0;Null->Other[0]->Sink[1];Sink==[A,B    ];Other==[Null,Null,C   ];OtherIdxMap{C:[2,3]      }
                 i=2v=C:
                 OtherIdxMap[C].remove(0)->2;Null->Other[2]->Sink[2];Sink==[A,B,C  ];Other==[Null,Null,Null];OtherIdxMap{C:[3]        }
@@ -564,9 +559,9 @@ mod tests {
                 r#"{"A":true,"B":true,"C":true}"#,
             ),
             2 => (
-                r#"{"A":true,"B":true,"C":true}"#,
-                r#"{"A":true,"B":false,"C":true}"#,
-                r#"{"A":true,"B":false,"C":true}"#,
+                r#"{"A":true,"B":[1,0],"C":true}"#,
+                r#"{"A":true,"C":true,"B":[0,1]}"#,
+                r#"{"A":true,"B":[0,1],"C":true}"#,
             ),
             3 => (
                 r#"{"A":true,"B":true,"C":true}"#,
@@ -583,7 +578,7 @@ mod tests {
                 r#"{"B":true,"C":true,"A":true}"#,
                 r#"{"A":true,"B":true,"C":true}"#,
             ),
-            6 => (r#"["A","B","C"]"#, r#"["F","C","C"]"#, r#"["C", "F", "C"]"#),
+            6 => (r#"["A","B","C"]"#, r#"["F","C","C"]"#, r#"["C","F","C"]"#),
             7 => (
                 r#"["A","B","C"]"#,
                 r#"["other_value",false,"A","B","C"]"#,
@@ -606,7 +601,7 @@ mod tests {
             ),
             11 => (
                 r#"["A","B","C",13.37]"#,
-                r#"["C", 13.37, "B", "A"]"#,
+                r#"["C",13.37,"B","A"]"#,
                 r#"["A","B","C",13.37]"#,
             ),
             12 => (
