@@ -155,11 +155,15 @@ pub struct Take {
 
     /// filepath of input cut file
     #[argh(option, short = 'c')]
-    cut: PathBuf,
+    cut: Option<PathBuf>,
 
     /// output of take file
     #[argh(option, short = 'o', arg_name = "file")]
     take_out: Option<PathBuf>,
+
+    /// filepath of merge cuts
+    #[argh(positional, arg_name = "file")]
+    merge_cuts: Vec<String>,
 }
 
 /// Attempts to play through an entire Reel sequence running a take for every frame in the sequence
@@ -184,7 +188,7 @@ pub struct Record {
 
     /// filepath of merge cuts
     #[argh(positional, arg_name = "file")]
-    merge_cuts: Vec<PathBuf>,
+    merge_cuts: Vec<String>,
 
     /// output directory for successful takes
     #[argh(option, short = 'o')]
@@ -214,16 +218,32 @@ impl Take {
             return Err(anyhow!("<frame> must be a valid file"));
         }
 
-        // TODO for now remove file requirement
-        //
-        // this permits describable zsh `=(thing)` or basic `<(thing)` FIFO syntax
-        // https://superuser.com/questions/1059781/what-exactly-is-in-bash-and-in-zsh
-        // if !self.cut.is_file() {
-        //     return Err("<cut> must be a valid file");
-        // }
+        let cut_file = self.get_cut_file()?;
+        if !cut_file.is_file() {
+            return Err(anyhow!(
+                "{} must be a valid file",
+                cut_file.to_string_lossy()
+            ));
+        }
+
         Ok(())
     }
+
+    /// Returns expected cut filename in the given directory with the reel name derived from
+    /// the provided frame file
+    pub fn get_cut_file(&self) -> Result<PathBuf, Error> {
+        use std::convert::TryFrom;
+
+        if let Some(cut) = &self.cut {
+            return Ok(cut.clone());
+        }
+        let metaframe = filmreel::reel::MetaFrame::try_from(self.frame.clone())?;
+        let dir = self.frame.parent().unwrap();
+
+        Ok(metaframe.get_cut_file(dir))
+    }
 }
+
 impl Record {
     /// validate ensures the reels is a valid directory and ensures that the corresponding cut file
     /// exists
@@ -309,4 +329,19 @@ where
             .to_string_hidden()?
             .to_colored_json_with_styler(ColorMode::default().eval(), get_styler())?)
     }
+}
+
+// try to see if a given string *might* be json
+pub fn guess_json_obj<T: AsRef<str>>(obj: T) -> bool {
+    let trimmed_obj = obj
+        .as_ref()
+        .chars()
+        .filter(|c| !c.is_whitespace())
+        .collect::<String>();
+
+    if trimmed_obj.starts_with("{\"") && trimmed_obj.ends_with("\"}") {
+        return true;
+    }
+
+    false
 }
