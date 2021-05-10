@@ -96,7 +96,6 @@ pub fn merge_into(base_register: &mut Register, merge_cuts: Vec<String>) -> Resu
             if crate::guess_json_obj(&c) {
                 return Ok(c);
             }
-            dbg!(&c);
             fr::file_to_string(&c).map_err(|e| anyhow!("{} - {}", c, e))
         })
         .scan(&mut err, filmreel::until_err)

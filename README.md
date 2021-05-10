@@ -46,55 +46,13 @@ Examples:
   $ dark -i record ./test_data post
   
   Echo the origin `${IP}` that gets written to the cut register from the httpbin.org POST request:
-  $ dark --cut-out >(jq .IP) take ./test_data/post.01s.body.fr.json --cut ./test_data/post.cut.json
+  $ dark --cut-out >(jq .IP) take ./test_data/post.01s.body.fr.json
 
 Notes:
   Use `dark man` for details on filmReel, the JSON format.
 
 ```
 <!-- dark stop -->
-
-
-`dark take`:
-
-<!-- dark take start -->
-```
-Usage: dark take <frame> -c <cut> [-o <file>]
-
-Takes a single frame, emitting the request then validating the returned response
-
-Options:
-  -c, --cut         filepath of input cut file
-  -o, --take-out    output of take file
-  --help            display usage information
-
-```
-<!-- dark take stop -->
-
-`dark record`:
-
-<!-- dark record start -->
-```
-Usage: dark record <reel_path> <reel_name> [<merge_cuts...>] [-c <cut>] [-b <component...>] [-o <take-out>] [-r <range>] [-t <timeout>] [-s] [-d]
-
-Attempts to play through an entire Reel sequence running a take for every frame in the sequence
-
-Options:
-  -c, --cut         filepath of input cut file
-  -b, --component   repeatable component reel pattern using an ampersand
-                    separator: --component "<dir>&<reel_name>"
-  -o, --take-out    output directory for successful takes
-  -r, --range       the range (inclusive) of frames that a record session will
-                    use, colon separated: --range <start>:<end> --range <start>:
-  -t, --timeout     client request timeout in seconds, --timeout 0 disables
-                    request timeout [default: 30]
-  -s, --timestamp   print timestamp at take start, error return, and reel
-                    completion
-  -d, --duration    print total time elapsed from record start to completion
-  --help            display usage information
-
-```
-<!-- dark record stop -->
 
 ## Examples:
 
@@ -104,8 +62,7 @@ dark -i record ./test_data post
 # to fail at the third httpbin frame, set a timeout of two seconds
 dark -i record ./test_data post --timeout 2
 # multiple merge cuts can be used, with values being overridden left to right (right will have newer values)
-dark -v --interactive record ./test_data post --cut ./test_data/post.cut.json \
-    <(echo '{"new":"value"}') <(echo '{"newer": "value", "new":"overridden"}')
+dark --interactive record ./test_data post --cut ./test_data/post.cut.json '{"NEW":"value"}' '{"NEWER": "value", "NEW":"overridden"}'
 # echo the origin "${IP}" that gets written to the cut register from the httpbin.org POST request
 dark --cut-out >(jq .IP) take ./test_data/post.01s.body.fr.json --cut ./test_data/post.cut.json
 # create a stripe token using public API key
@@ -188,3 +145,30 @@ tar czf darkroom-"$VERSION"-grpcurl-x86_64-apple-darwin.tar.gz -C target/release
 (cd $GRPCURL_DIR; env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o $DR_DIR/target/x86_64-unknown-linux-musl/release/grpcurl ./cmd/grpcurl) && \
 tar czf darkroom-"$VERSION"-grpcurl-x86_64-unknown-linux-musl.tar.gz -C ./target/x86_64-unknown-linux-musl/release dark grpcurl
 -->
+Usage: dark record <reel_path> <reel_name> [<merge_cuts...>] [-c <cut>] [-b <component...>] [-o <take-out>] [-r <range>] [-t <timeout>] [-s] [-d]
+
+Attempts to play through an entire Reel sequence running a take for every frame in the sequence
+
+Options:
+  -c, --cut         filepath of input cut file
+  -b, --component   repeatable component reel pattern using an ampersand
+                    separator: --component "<dir>&<reel_name>"
+  -o, --take-out    output directory for successful takes
+  -r, --range       the range (inclusive) of frames that a record session will
+                    use, colon separated: --range <start>:<end> --range <start>:
+  -t, --timeout     client request timeout in seconds, --timeout 0 disables
+                    request timeout [default: 30]
+  -s, --timestamp   print timestamp at take start, error return, and reel
+                    completion
+  -d, --duration    print total time elapsed from record start to completion
+  --help            display usage information
+
+Usage: dark take <frame> [<merge_cuts...>] [-c <cut>] [-o <file>]
+
+Takes a single frame, emitting the request then validating the returned response
+
+Options:
+  -c, --cut         filepath of input cut file
+  -o, --take-out    output of take file
+  --help            display usage information
+
