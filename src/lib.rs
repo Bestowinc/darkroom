@@ -61,7 +61,7 @@ pub struct Command {
     verbose: bool,
 
     /// fallback address passed to the specified protocol
-    #[argh(positional, short = 'a')]
+    #[argh(positional)]
     address: Option<String>,
 
     /// fallback header passed to the specified protocol
@@ -85,7 +85,7 @@ pub struct Command {
     proto_dir: Vec<PathBuf>,
 
     /// pass proto files used for payload forming
-    #[argh(option, short = 'p')]
+    #[argh(option, short = 'p', arg_name = "file")]
     proto: Vec<PathBuf>,
 
     #[argh(subcommand)]
@@ -148,6 +148,10 @@ pub struct Version {
 /// Takes a single frame, emitting the request then validating the returned response
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand, name = "take")]
+#[argh(
+    example = "Echo the origin `${{IP}}` that gets written to the cut register from the httpbin.org POST request:
+$ dark --cut-out >(jq .IP) take ./test_data/post.01s.body.fr.json"
+)]
 pub struct Take {
     /// path of the frame to process
     #[argh(positional)]
