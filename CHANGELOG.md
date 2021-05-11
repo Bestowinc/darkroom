@@ -1,10 +1,12 @@
 #### `0.7.0`:
 * added `dark man` command for additional documentation, can be excluded from build with the `--no-default-features` flag
 * added partial and unordered response validations to filmreel
-* implemented subset of `jql` for local selections, the `jql` library can be included with the `--features=filmreel/full_jql` flag
+* implemented subset of `jql` for mutable selections of the resposne json
+  the `jql` library can be included with the `--features=filmreel/full_jql` flag
+* an empty body in the request is now appropriately represented as a missing `body` key rather than `"body": {}`
 * `take` and `record` can now accept a mixture of filepaths and json strings:
   `dark take ./test_data/post.01s.body.fr.json '{"new":"value"}' ./test_data/post.cut.json`
-* `dark take` command simplified, if `--cut` not provided, will try to look for a cut file in the same directory as the given frame file
+* `dark take` command simplified, if `--cut` not provided, will try to look for a cut file in the same directory as the given frame json
 
 #### `0.6.0`:
 * added `--import-path` for `dark --proto` arguments specifying paths for proto definition lookup

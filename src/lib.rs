@@ -161,6 +161,10 @@ pub struct Take {
     #[argh(option, short = 'c')]
     cut: Option<PathBuf>,
 
+    /// ignore looking for a cut file when running take
+    #[argh(switch, short = 'n')]
+    no_cut: bool,
+
     /// output of take file
     #[argh(option, short = 'o', arg_name = "file")]
     take_out: Option<PathBuf>,
@@ -222,6 +226,12 @@ impl Take {
             return Err(anyhow!("<frame> must be a valid file"));
         }
 
+        // if there are merge cuts to use or --no-cut was specified
+        // return early
+        if !self.merge_cuts.is_empty() || self.no_cut {
+            return Ok(());
+        }
+
         let cut_file = self.get_cut_file()?;
         if !cut_file.is_file() {
             return Err(anyhow!(
@@ -242,9 +252,8 @@ impl Take {
             return Ok(cut.clone());
         }
         let metaframe = filmreel::reel::MetaFrame::try_from(self.frame.clone())?;
-        let dir = self.frame.parent().unwrap();
-
-        Ok(metaframe.get_cut_file(dir))
+        let dir = std::fs::canonicalize(&self.frame)?;
+        Ok(metaframe.get_cut_file(dir.parent().unwrap()))
     }
 }
 

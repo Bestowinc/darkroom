@@ -201,7 +201,7 @@ impl MetaFrame {
     // get_cut_file retuns the default cut file location
     pub fn get_cut_file<P: AsRef<Path>>(&self, dir: P) -> PathBuf {
         if !dir.as_ref().is_dir() {
-            panic!("{} is not a directory!", dir.as_ref().to_string_lossy());
+            panic!("\"{}\" is not a directory!", dir.as_ref().to_string_lossy());
         }
 
         dir.as_ref().join(format!("{}.cut.json", self.reel_name))

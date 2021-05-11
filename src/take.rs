@@ -223,14 +223,22 @@ pub fn run_take<'a>(
 /// take_cmd runs a single take using the darkroom::Take struct
 pub fn take_cmd(cmd: Take, base_params: BaseParams) -> Result<(), Error> {
     let frame_str = fr::file_to_string(&cmd.frame)?;
-    let cut_str = fr::file_to_string(cmd.get_cut_file()?)?;
-
     let metaframe = MetaFrame::try_from(cmd.frame.clone())?;
+
+    // set up cut register
+    let mut cut_register: Register;
+
+    let cut_file = cmd.get_cut_file()?;
+    if cmd.no_cut || !cut_file.exists() && !cmd.merge_cuts.is_empty() {
+        cut_register = Register::new();
+    } else {
+        let cut_str = fr::file_to_string(cut_file)?;
+        cut_register = Register::from(&cut_str)?;
+    }
 
     // Frame to be mutably borrowed
     let frame = Frame::new(&frame_str).context(metaframe.get_filename())?;
     let mut payload_frame = frame.clone();
-    let mut cut_register = Register::from(&cut_str)?;
     crate::record::merge_into(&mut cut_register, cmd.merge_cuts)?;
     if let Err(e) = run_take(
         &mut payload_frame,
