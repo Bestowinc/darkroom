@@ -343,7 +343,7 @@ pub fn guess_json_obj<T: AsRef<str>>(obj: T) -> bool {
         .filter(|c| !c.is_whitespace())
         .collect::<String>();
 
-    if trimmed_obj.starts_with("{\"") && trimmed_obj.ends_with("\"}") {
+    if trimmed_obj.starts_with("{\"") && trimmed_obj.contains("\":") && trimmed_obj.ends_with('}') {
         return true;
     }
 

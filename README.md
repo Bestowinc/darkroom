@@ -71,67 +71,6 @@ dark --cut-out >(jq) record ./test_data stripe_token
 dark --cut-out >(jq) record ./test_data stripe_subscription --component './test_data&stripe_token'
 ```
 
-
-## Changes:
-
-#### `0.2`:
-
-* HTTP support
-* added `form` key to HTTP frame requests: `{"request":{"uri":"POST post","form":{"key":"val","array[0]":"val0"}}}`
-* full JSON object storage and retrieval, the cut register is no longer a flat associative array, strings are still used to map to JSON objects for templating
-* variable discarding: `${lowercase}` variables will only be kept around for the duration of the frame
-* headers and entrypoints can be stored and read on a per JSON frame basis
-* SOPS/JSON secrets support
-
-#### `0.2.1`:
-
-* added hidden variable support, hidden variables are defined with a leading underscore: `${_HIDDEN}`
-* added `dark version` command
-* moved common parameters into the main `dark` command to be shared across subcommands
-
-#### `0.2.3`:
-
-* added component reel support, component reels are generated as a prelude to the provided reel   `dark record --component "<dir>&<reel_name>" ./dir/ my_reel_name`
-* added anyhow error handling
-* `--cut-out` can now be returned on a failed `record` or `take`
-
-#### `0.3.0`:
-
-* removed YAML deserialization now that `grpcurl` properly emits JSON errors
-* added retry `attempts` to frame requests: `{"request":{"attempts": {"times": 5, "ms": 500}}}`
-
-#### `0.3.1`:
-
-* frame response body is now optional
-
-#### `0.3.2`:
-
-* request retry attempts now include a `process_response` comparison
-* `ToTakeHiddenColouredJson` is now a generic trait
-* `ToStringHidden` is now a generc trait
-* moved styler out of take.rs and into lib.rs
-
-#### `0.3.3`:
-
-* range is added to recordings: `dark record --range "<start_u32>:<end_u32>" ./dir/ my_reel_name`
-* `grpcurl` errors propagate to stdout properly
-* `"request"["form"]` request building URL functionality moved to `"request"["query"]`
-* `"request"["form"]` now properly bulids the form data of the HTTP request
-
-#### `0.4.0`:
-
-* range is added to recordings: `dark record --range "<start_u32>:<end_u32>" ./dir/ my_reel_name`
-
-#### `0.5.0`:
-
-* timestamps are added to recordings: `dark record record ./test_data post --timestamp`
-* 30 sec default timeout can now be overridden: `dark record record ./test_data post --timeout 2`
-* reel sequence numbers are now checked for duplicates
-
-#### `0.6.0`:
-* added `--import-path` for `dark --proto` arguments specifying paths for proto definition lookup
-* added `dark record --duration` to display total time elapsed in a record session
-
 <!--
 VERSION="0.6.0"
 DR_DIR=$PWD
