@@ -9,7 +9,7 @@ readme = "README.md"
 
 documentation = "https://docs.rs/crate/darkroom/"
 homepage = "https://crates.io/crates/darkroom"
-repository = "https://github.com/mkatychev/darkroom/"
+repository = "https://github.com/Bestowinc/darkroom/"
 
 [[bin]]
 name = "dark"

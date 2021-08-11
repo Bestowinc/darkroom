@@ -82,7 +82,7 @@ const ENTRY_DOCSTRING: &str = r#"<entry>:
     validation
     "#;
 
-const FILMREEL_REPO: &str = "https://github.com/mkatychev/filmReel/blob/master/";
+const FILMREEL_REPO: &str = "https://github.com/Bestowinc/filmReel/blob/master/";
 
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand, name = "man")]
