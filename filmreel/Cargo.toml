@@ -1,6 +1,6 @@
 [package]
 name = "filmreel"
-version = "0.6.1"
+version = "0.6.2"
 description = "filmReel parser for Rust"
 authors = ["Mikhail Katychev <mkatych@gmail.com>"]
 edition = "2018"
@@ -9,7 +9,7 @@ readme = "README.md"
 
 documentation = "https://docs.rs/crate/filmreel/"
 homepage = "https://crates.io/crates/filmreel"
-repository = "https://github.com/Bestowinc/darkroom"
+repository = "https://github.com/mkatychev/darkroom"
 
 [lib]
 name = "filmreel"
