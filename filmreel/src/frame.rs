@@ -113,7 +113,10 @@ impl<'a> Frame<'a> {
                     match new_key {
                         // if new_key is a duplicate of existing keys
                         Value::String(new_key) if keys.contains(&new_key) => {
-                            return Err(FrError::FrameParsef(DUPE_KEY_UPON_HYDRATION_ERR, new_key));
+                            return Err(FrError::FrameParsef(
+                                DUPE_KEY_UPON_HYDRATION_ERR,
+                                new_key.into(),
+                            ));
                         }
                         Value::String(new_key) => {
                             replace_keys.push((keys.get(key).unwrap(), new_key));
@@ -121,11 +124,11 @@ impl<'a> Frame<'a> {
                         _ => return Err(FrError::FrameParse(INVALID_KEY_HYDRATION_ERR)),
                     }
                 }
-                // newly generated keys will now be inserted into the map
+                // newly_generated keys will now be inserted into the map
                 // removing the old key first
                 for (old_key, new_key) in replace_keys.into_iter() {
-                    // key hash has to be recomputed
-                    // thus an explicit Map::remove is required
+                    // key hash hash to be recomputed
+                    // thus an explicit HashSet::remove is required
                     let val = map.remove(old_key).unwrap();
                     map.insert(new_key, val);
                 }
@@ -153,7 +156,7 @@ impl<'a> Frame<'a> {
         hide: bool,
     ) -> Result<bool, FrError> {
         {
-            let matches = reg.read_match(val.as_str().expect("hydrate_str None found"))?;
+            let matches = reg.read_match(&val.as_str().expect("hydrate_str None found"))?;
             // return false if no matches found
             if matches.is_empty() {
                 return Ok(false);
