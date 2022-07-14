@@ -128,9 +128,6 @@ impl<'a> Response<'a> {
             }
         }
 
-        // for comparison's sake set validtion to None once applying is finished
-        self.validation = None;
-
         Ok(())
     }
 }
