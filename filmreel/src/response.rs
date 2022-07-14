@@ -675,8 +675,13 @@ mod tests {
 
     #[test]
     fn test_validation_on_retries() {
-        let self_response = str::replace(PARTIAL_UNORDERED, "%s", r#"{"A":true,"B":true,"C":true}"#);
-        let other_response = str::replace(SIMPLE_FRAME, "%s", r#"{"D":true,"B":true,"C":true,"A":true}"#);
+        let self_response =
+            str::replace(PARTIAL_UNORDERED, "%s", r#"{"A":true,"B":true,"C":true}"#);
+        let other_response = str::replace(
+            SIMPLE_FRAME,
+            "%s",
+            r#"{"D":true,"B":true,"C":true,"A":true}"#,
+        );
         let expected_response = str::replace(SIMPLE_FRAME, "%s", r#"{"A":true,"B":true,"C":true}"#);
 
         let mut frame: Response = serde_json::from_str(&self_response).unwrap();
