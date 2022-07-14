@@ -672,4 +672,27 @@ mod tests {
         // even it if is not a _full_ match against our initial frame
         pretty_assertions::assert_eq!(other_frame, expected_frame);
     }
+
+    #[test]
+    fn test_validation_on_retries() {
+        let self_response = str::replace(PARTIAL_UNORDERED, "%s", r#"{"A":true,"B":true,"C":true}"#);
+        let other_response = str::replace(SIMPLE_FRAME, "%s", r#"{"D":true,"B":true,"C":true,"A":true}"#);
+        let expected_response = str::replace(SIMPLE_FRAME, "%s", r#"{"A":true,"B":true,"C":true}"#);
+
+        let mut frame: Response = serde_json::from_str(&self_response).unwrap();
+
+        let mut other_frame1: Response = serde_json::from_str(&other_response).unwrap();
+        let expected_frame1: Response = serde_json::from_str(&expected_response).unwrap();
+
+        frame.apply_validation(&mut other_frame1).unwrap();
+
+        pretty_assertions::assert_eq!(other_frame1, expected_frame1);
+
+        let mut other_frame2: Response = serde_json::from_str(&other_response).unwrap();
+        let expected_frame2: Response = serde_json::from_str(&expected_response).unwrap();
+
+        frame.apply_validation(&mut other_frame2).unwrap();
+
+        pretty_assertions::assert_eq!(other_frame2, expected_frame2);
+    }
 }
