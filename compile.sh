@@ -6,6 +6,13 @@
 
 ## USAGE
 # ./compile.sh build_cross && ./compile.sh build_linux
+USAGE="$0 (build_cross|build_linux)"
+case "$1" in
+--help | -h)
+  echo "$USAGE"
+  exit 0
+  ;;
+esac
 
 set -ueo pipefail
 
