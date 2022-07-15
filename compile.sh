@@ -5,7 +5,7 @@
 # rustup target add aarch64-apple-darwin
 
 ## USAGE
-# ./compile.sh 'build_cross'
+# ./compile.sh build_cross && ./compile.sh build_linux
 
 set -ueo pipefail
 
