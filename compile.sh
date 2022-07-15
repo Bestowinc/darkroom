@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+## SETUP
+# cargo install cross
+# rustup target add aarch64-apple-darwin
+
+## USAGE
+# ./compile.sh 'build_cross'
+
 set -ueo pipefail
 
 docker info >/dev/null
